@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROAMiQ Cloud</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+    :root {
+      --bg: #000000;
+      --card: #1E1E1E;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #F9FAFB;
+      --muted: #86868b;
+      --primary: #00BFFF;
+      --primary-hover: #009dd6;
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.1);
+      --error: #ef4444;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 420px;
+      width: 100%;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo svg {
+      width: 120px;
+      height: auto;
+    }
+
+    .logo .cloud-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .logo .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 16px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .code-display {
+      text-align: center;
+      padding: 24px 0;
+    }
+
+    .code-digits {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 12px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      color: var(--primary);
+      margin: 16px 0;
+    }
+
+    .code-label {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    .status-waiting {
+      background: rgba(0, 191, 255, 0.1);
+      color: var(--primary);
+    }
+
+    .status-connected {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .status-error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .connected-card { text-align: center; }
+
+    .connected-card .check {
+      width: 48px;
+      height: 48px;
+      background: var(--success-bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      color: var(--success);
+      font-size: 24px;
+    }
+
+    .tunnel-url {
+      display: block;
+      padding: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 12px;
+      word-break: break-all;
+    }
+
+    .tunnel-url:hover { text-decoration: underline; }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .step {
+      display: flex;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      color: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hidden { display: none !important; }
+
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--success);
+      color: #000;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      opacity: 0;
+      transition: transform 0.4s ease, opacity 0.4s ease;
+      box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Payment overlay */
+    .big-spinner {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0%, var(--primary) 100%);
+      mask: radial-gradient(circle 22px at center, transparent 0, transparent 21px, black 22px);
+      -webkit-mask: radial-gradient(circle 22px at center, transparent 0, transparent 21px, black 22px);
+      animation: spin 1s linear infinite;
+    }
+    .overlay-step {
+      font-size: 14px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: color 0.3s ease;
+    }
+    .overlay-step .overlay-step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s ease, transform 0.3s ease;
+    }
+    .overlay-step.active {
+      color: var(--text);
+    }
+    .overlay-step.active .overlay-step-dot {
+      background: var(--primary);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .overlay-step.done {
+      color: var(--success);
+    }
+    .overlay-step.done .overlay-step-dot {
+      background: var(--success);
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.5); }
+      50% { transform: scale(1.4); box-shadow: 0 0 0 6px rgba(0, 191, 255, 0); }
+    }
+  </style>
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <div id="toast" class="toast">&#10003; Backup completed successfully</div>
+  <div class="container">
+    <div class="logo">
+      <div class="logo-row">
+        <svg viewBox="0 0 3461 693" xmlns="http://www.w3.org/2000/svg" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+          <g>
+            <path d="M3275.189,434.475c4.129,-4.538 16.562,-38.321 18.279,-45.754c34.025,-147.546 -74.179,-285.208 -228.275,-272.021c-164.529,14.075 -242.55,213.371 -151.034,344.679c66.225,95.025 203.379,119.858 292.942,43.896l-84.254,-87.067l67.329,-67.158l76.737,87.396c0.492,0.321 7.267,-2.863 8.275,-3.971Zm70.771,78.004c19.987,17.354 37.504,37.438 56.321,56.017c10.625,10.488 42.808,30.367 37.896,44.808c-2.4,7.054 -51.271,56.833 -57.567,58.208c-5.413,1.179 -9.171,-3.533 -12.846,-6.375c-14.829,-11.45 -83.85,-89.967 -90.192,-90.833c-17.225,6.733 -32.829,22.658 -49.421,32.35c-275.2,160.704 -578.95,-180 -399.096,-449.096c207.179,-309.979 693.059,-40.921 539.317,295.567c-6.067,13.279 -24.996,38.354 -27.312,47.862c-1.1,4.513 -0.512,8.188 2.9,11.492Z" style="fill:#F9FAFB;fill-rule:nonzero;"/>
+            <path d="M2679.206,189.55l0,442.721l-95.312,0l2.283,-442.721" style="fill:#F9FAFB;fill-rule:nonzero;"/>
+            <path d="M2586.535,119.788l0.483,-93.767l92.188,0l0,93.75" style="fill:#F9FAFB;fill-rule:nonzero;"/>
+            <path d="M2426.081,632.271l-100,0l0,-440.625l-198.45,256.362c-5.642,-0.008 -17.1,-16.817 -21.538,-22.308c-54.679,-67.612 -100.446,-142.962 -155.142,-210.483c-6.654,-8.213 -14.513,-22.025 -24.871,-23.571l0,440.625l-89.062,0l-1.579,-606.262c17.225,-2.387 34.875,2.138 51.237,2.842c12.367,0.537 29.992,-6.521 44.296,3.217l196.671,275.154c70.592,-88.546 134.05,-182.875 199.917,-275.033c9.867,-7.708 82.1,-9.288 92.225,-4.554c1.475,0.687 6.296,5.662 6.296,6.2l0,598.438Z" style="fill:#F9FAFB;fill-rule:nonzero;"/>
+            <path d="M905.768,301.021l150,0c9.221,0 -1.567,-31.887 -3.242,-37.379c-69.342,-227.375 -420.087,-181.525 -417.237,76.537c2.525,228.388 317.312,283.317 410.092,87.954c6.383,-13.446 17.075,-46.6 17.679,-60.612c0.167,-3.879 -1.5,-4.904 -4.167,-7.125l-150,0c-12.233,13.017 -16.25,26.242 -31.817,36.933c-69.871,47.979 -150.704,-36.462 -102.213,-108.504c34.525,-51.292 100.721,-34.554 130.904,12.196Zm753.125,331.25l-62.379,-137.729l-274.617,0.733l-59.642,134.108l-98.658,2.862l87.446,-207.825l318.792,-4.671l-110.942,-274.913l-92.133,214.05l-206.321,4.617c-9.55,104.838 -73.979,195.621 -166.637,244.3c-261.942,137.621 -545.35,-129.425 -428.558,-400.429c117.263,-272.079 503.462,-234.988 585.663,45.383c1.9,6.483 8.521,47.963 11.35,48.442l132.604,-1.708l112.288,-268.142c8.679,-8.542 89.246,-7.233 100.121,-0.579l246.938,601.5l-95.312,0Z" style="fill:#F9FAFB;fill-rule:nonzero;"/>
+            <path d="M122.956,310.396l151.562,0c17.833,0 57.183,-16.35 70.421,-29.575c57.863,-57.829 13.938,-161.05 -67.296,-161.05l-154.688,0l0,190.625Zm365.625,321.875l-101.563,0c-7.563,-7.404 -12.358,-17.092 -17.729,-26.025c-37.433,-62.271 -74.388,-146.042 -115.596,-203.15c-3.075,-4.267 -6.517,-7.963 -10.425,-11.45l-120.313,0l0,240.625l-103.125,0l-0,-601.563c5.025,-7.729 12.233,-1.579 20.175,-1.408c90.696,1.975 252.325,-16.092 329.479,20.504c143.563,68.096 131.108,281.487 -21.608,327.704l-3.113,9.192l143.817,245.571Z" style="fill:#F9FAFB;fill-rule:nonzero;"/>
+          </g>
+        </svg>
+        <span class="cloud-label">Cloud</span>
+      </div>
+      <p class="subtitle">Secure remote access for Home Assistant</p>
+    </div>
+
+    <!-- State: Initial -->
+    <div id="state-initial" class="card">
+      <h2>Set Up Remote Access</h2>
+      <p>Securely access your Home Assistant from anywhere through ROAMiQ Cloud. Sign in below — no port forwarding, no leaving Home Assistant.</p>
+      <button class="btn btn-primary" id="btn-pair" onclick="startPairing()">
+        Continue
+      </button>
+    </div>
+
+    <!-- State: Auth (sign in / create account) -->
+    <div id="state-auth" class="card hidden">
+      <h2 id="auth-title">Create ROAMiQ Cloud Account</h2>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border);">
+        <button class="auth-tab" id="tab-signin" onclick="switchAuthTab('signin')" style="background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent;">Sign In</button>
+        <button class="auth-tab active" id="tab-signup" onclick="switchAuthTab('signup')" style="background: none; border: none; color: var(--text); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--primary); font-weight: 600;">Create Account</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+        <button type="button" class="btn-oauth" onclick="signInOAuth('google')" style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 10px 16px; background: white; color: #1f1f1f; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </button>
+        <button type="button" class="btn-oauth" onclick="signInOAuth('github')" style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 10px 16px; background: #24292f; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          Continue with GitHub
+        </button>
+        <div style="display: flex; align-items: center; gap: 12px; margin: 4px 0; color: var(--muted); font-size: 12px;">
+          <div style="flex: 1; height: 1px; background: var(--border);"></div>
+          OR
+          <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        </div>
+      </div>
+      <form id="auth-form" onsubmit="submitAuth(event)">
+        <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Email</label>
+        <input type="email" id="auth-email" required autocomplete="email" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; margin-bottom: 12px;">
+        <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Password</label>
+        <input type="password" id="auth-password" required minlength="8" autocomplete="new-password" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px;">
+        <div id="auth-error" class="hidden status status-error" style="margin-top: 12px;"></div>
+        <button type="submit" class="btn btn-primary" id="btn-auth-submit">Create Account</button>
+      </form>
+    </div>
+
+    <!-- State: Subdomain picker -->
+    <div id="state-subdomain" class="card hidden" style="position: relative;">
+      <h2>Choose Your Address</h2>
+      <p>Pick a name for your secure remote-access URL. You can keep it private — only you and people you share it with will know it.</p>
+      <form onsubmit="submitClaim(event)" style="margin-top: 16px;">
+        <div style="display: flex; align-items: center; gap: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0 12px;">
+          <input type="text" id="subdomain-input" required pattern="[a-z0-9][a-z0-9-]{1,30}[a-z0-9]" placeholder="myvan" autocomplete="off" autocapitalize="none" style="flex: 1; padding: 10px 0; background: transparent; border: none; color: var(--text); font-size: 14px; outline: none;">
+          <span style="color: var(--muted); font-size: 14px;">.cloud.roamiq.com</span>
+        </div>
+        <p style="font-size: 12px; color: var(--muted); margin-top: 6px;">3–32 characters · lowercase letters, numbers, hyphens</p>
+        <div id="claim-error" class="hidden status status-error" style="margin-top: 12px;"></div>
+        <button type="submit" class="btn btn-primary" id="btn-claim-submit">Connect</button>
+      </form>
+      <!-- Progress overlay covers the form during claim + tunnel bring-up -->
+      <div id="claim-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(30, 30, 30, 0.96); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; z-index: 10; backdrop-filter: blur(2px);">
+        <div class="big-spinner" aria-hidden="true"></div>
+        <div id="claim-overlay-title" style="margin-top: 24px; font-size: 18px; font-weight: 600; font-family: 'Montserrat', sans-serif; text-align: center;">Connecting</div>
+        <div id="claim-overlay-sub" style="margin-top: 8px; font-size: 13px; color: var(--muted); text-align: center; min-height: 18px;">Reserving your address with ROAMiQ Cloud...</div>
+        <div id="claim-overlay-steps" style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; width: 100%; max-width: 260px;">
+          <div class="overlay-step" data-step="reserve"><span class="overlay-step-dot"></span> Reserving address</div>
+          <div class="overlay-step" data-step="tunnel"><span class="overlay-step-dot"></span> Provisioning secure tunnel</div>
+          <div class="overlay-step" data-step="ready"><span class="overlay-step-dot"></span> Almost done</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State: MFA challenge -->
+    <div id="state-mfa" class="card hidden">
+      <h2>Two-Factor Authentication</h2>
+      <p>Enter the 6-digit code from your authenticator app.</p>
+      <form onsubmit="submitMfaChallenge(event)" style="margin-top: 16px;">
+        <input type="text" id="mfa-code" required pattern="[0-9]{6}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" style="width: 100%; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 24px; font-family: 'SF Mono', monospace; text-align: center; letter-spacing: 8px;">
+        <div id="mfa-error" class="hidden status status-error" style="margin-top: 12px;"></div>
+        <button type="submit" class="btn btn-primary" id="btn-mfa-submit">Verify</button>
+      </form>
+    </div>
+
+    <!-- State: Plan picker -->
+    <div id="state-plan-picker" class="card hidden">
+      <h2>Choose a Plan</h2>
+      <p>Activate ROAMiQ Cloud to enable secure remote access.</p>
+      <div id="plan-options" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;"></div>
+      <div id="plan-error" class="hidden status status-error" style="margin-top: 12px;"></div>
+    </div>
+
+    <!-- State: Stripe payment -->
+    <div id="state-payment" class="card hidden" style="position: relative;">
+      <h2 id="payment-title">Complete Payment</h2>
+      <p id="payment-summary" style="margin-bottom: 16px;"></p>
+      <form id="payment-form" onsubmit="submitPayment(event)">
+        <div id="payment-element" style="background: white; border-radius: 8px; padding: 12px; min-height: 60px;"></div>
+        <div id="payment-error" class="hidden status status-error" style="margin-top: 12px;"></div>
+        <button type="submit" class="btn btn-primary" id="btn-payment-submit" style="margin-top: 16px;">Pay & Activate</button>
+        <button type="button" id="btn-payment-back" onclick="showPlanPicker()" style="margin-top: 8px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; width: 100%;">← Choose a different plan</button>
+      </form>
+      <!-- Progress overlay covers the form during payment + activation -->
+      <div id="payment-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(30, 30, 30, 0.96); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; z-index: 10; backdrop-filter: blur(2px);">
+        <div class="big-spinner" aria-hidden="true"></div>
+        <div id="payment-overlay-title" style="margin-top: 24px; font-size: 18px; font-weight: 600; font-family: 'Montserrat', sans-serif; text-align: center;">Processing payment</div>
+        <div id="payment-overlay-sub" style="margin-top: 8px; font-size: 13px; color: var(--muted); text-align: center; min-height: 18px;">Authorizing your card with Stripe...</div>
+        <div id="payment-overlay-steps" style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; width: 100%; max-width: 240px;">
+          <div class="overlay-step" data-step="paying"><span class="overlay-step-dot"></span> Authorizing card</div>
+          <div class="overlay-step" data-step="activating"><span class="overlay-step-dot"></span> Activating subscription</div>
+          <div class="overlay-step" data-step="ready"><span class="overlay-step-dot"></span> Almost done</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State: HA Restarting -->
+    <div id="state-restarting" class="card hidden">
+      <h2>Restarting Home Assistant</h2>
+      <p style="margin-bottom: 12px;">We updated your configuration to allow secure tunnel traffic. Home Assistant needs to restart to apply the changes.</p>
+      <p style="color: var(--muted); font-size: 13px; margin-bottom: 16px;">This is a one-time setup step. It typically takes 1-2 minutes.</p>
+      <div class="status status-waiting">
+        <div class="spinner"></div>
+        <span>Waiting for Home Assistant to restart...</span>
+      </div>
+    </div>
+
+    <!-- State: Tunnel setup (downloading, starting, reconnecting) -->
+    <div id="state-tunnel" class="card hidden">
+      <h2 id="tunnel-title">Setting up tunnel...</h2>
+      <p id="tunnel-subtitle" style="margin-bottom: 16px;">Preparing secure connection</p>
+      <div id="tunnel-status" class="status status-waiting">
+        <div class="spinner"></div>
+        <span id="tunnel-status-text">Downloading tunnel software...</span>
+      </div>
+      <a id="tunnel-url-pending" href="#" target="_blank" class="tunnel-url" style="margin-top: 16px; display: none;">loading...</a>
+    </div>
+
+    <!-- State: Connected -->
+    <div id="state-connected" class="card hidden connected-card">
+      <div class="check">&#10003;</div>
+      <h2>Connected</h2>
+      <p>Your Home Assistant is accessible remotely at:</p>
+      <a id="tunnel-url" href="#" target="_blank" class="tunnel-url">loading...</a>
+      <div class="status status-connected" style="margin-top: 16px;">
+        <span>&#9679;</span>
+        <span>Tunnel active &mdash; secured by Cloudflare</span>
+      </div>
+    </div>
+
+    <!-- State: Error -->
+    <div id="state-error" class="card hidden">
+      <h2 style="color: var(--error);">Connection Error</h2>
+      <p id="error-message" style="margin-bottom: 12px;">Unable to establish tunnel</p>
+      <div id="error-logs" style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: var(--muted); max-height: 150px; overflow-y: auto; white-space: pre-wrap; display: none;"></div>
+      <button class="btn btn-primary" onclick="location.reload()" style="margin-top: 12px;">Retry</button>
+    </div>
+
+    <!-- State: Pending Restart -->
+    <div id="state-pending-restart" class="card hidden" style="border-color: rgba(251, 191, 36, 0.3);">
+      <h2 style="color: #fbbf24;">Restart Required</h2>
+      <p id="restart-reason" style="margin-bottom: 12px;">Configuration changes require a Home Assistant restart to take effect.</p>
+      <div class="status" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24;">
+        <span>&#9888;</span>
+        <span>Home Assistant needs to restart to apply changes</span>
+      </div>
+      <button class="btn btn-primary" id="btn-restart" onclick="restartHA()" style="background: #fbbf24; color: #000;">
+        Restart Home Assistant
+      </button>
+    </div>
+
+    <!-- Backup Section (visible when connected) -->
+    <div id="backup-section" class="card hidden" style="text-align: left;">
+      <h2>Cloud Backups</h2>
+      <p>Automatic nightly backups of your HA config to ROAMiQ Cloud.</p>
+
+      <div id="backup-last" style="margin-top: 12px; font-size: 14px; color: var(--muted);">
+        Last backup: <span id="backup-last-time">Never</span>
+      </div>
+
+      <!-- Restore-in-progress banner. Polls /api/restore/status every 3s
+           when visible. Hidden when no active restore. -->
+      <div id="restore-status" class="hidden" style="margin-top: 12px; padding: 12px; border: 1px solid rgba(0,191,255,0.3); border-radius: 8px; background: rgba(0,191,255,0.05);">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <div class="spinner"></div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px;">Restore in progress</div>
+            <div id="restore-step-text" style="font-size: 12px; color: var(--muted); margin-top: 2px;">Starting…</div>
+          </div>
+          <div id="restore-pct-text" style="font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums;">0%</div>
+        </div>
+        <div style="height: 6px; background: var(--border); border-radius: 999px; overflow: hidden;">
+          <div id="restore-bar" style="height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease;"></div>
+        </div>
+        <p style="margin-top: 8px; font-size: 11px; color: var(--muted);">
+          HA will restart when the restore applies. This page may briefly disconnect.
+        </p>
+      </div>
+
+      <div id="backup-status-msg" class="hidden" style="margin-top: 8px;">
+        <div class="status status-waiting">
+          <div class="spinner"></div>
+          <span id="backup-phase-text">Starting backup...</span>
+        </div>
+      </div>
+
+      <div id="backup-error" class="hidden" style="margin-top: 8px;">
+        <div class="status status-error">
+          <span id="backup-error-text"></span>
+        </div>
+      </div>
+
+      <div id="backup-success" class="hidden" style="margin-top: 8px;">
+        <div class="status status-connected">
+          <span>&#10003;</span>
+          <span>Backup completed successfully</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-backup" onclick="triggerBackup()" style="margin-top: 12px;">
+        Back Up Now
+      </button>
+
+      <p style="margin-top: 12px; font-size: 12px; color: var(--muted);">
+        Manage backups and restore at <a href="https://cloud.roamiq.com/backups" target="_blank" style="color: var(--primary);">cloud.roamiq.com/backups</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const BASE = new URL('.', window.location.href).href;
+    let CLOUD_ORIGIN = 'https://cloud.roamiq.com';
+    // Fetch the addon's resolved cloud_base_url. Lets a dev point the addon
+    // at a local Next.js without editing JS.
+    fetch(BASE + 'api/cloud-config')
+      .then(r => r.json())
+      .then(d => { if (d.cloud_base_url) CLOUD_ORIGIN = d.cloud_base_url.replace(/\/$/, ''); })
+      .catch(() => {});
+    let polling = false;
+    let lastPairingCode = null;
+    let authJwt = sessionStorage.getItem('roamiq_jwt') || null;
+    let authMode = 'signup';
+    let mfaPending = null;  // {factor_id} when MFA challenge needed
+    let stripeInstance = null;
+    let stripeElements = null;
+    let cloudConfig = null;
+    let pendingPlan = null;
+
+    function hideAll() {
+      ['state-initial', 'state-auth', 'state-mfa', 'state-subdomain', 'state-plan-picker', 'state-payment', 'state-restarting', 'state-tunnel', 'state-connected', 'state-error', 'state-pending-restart'].forEach(
+        id => document.getElementById(id).classList.add('hidden')
+      );
+      document.getElementById('backup-section').classList.add('hidden');
+    }
+
+    async function loadStatus() {
+      try {
+        const resp = await fetch(BASE + 'api/status');
+        const data = await resp.json();
+        renderStatus(data);
+        if ((data.has_token || data.pairing_code) && !data.connected && !polling) {
+          polling = true;
+          pollStatus();
+        }
+      } catch (e) {
+        console.error('Status check failed:', e);
+      }
+    }
+
+    function renderStatus(data) {
+      if (!data.has_token && !data.pairing_code) {
+        hideAll();
+        document.getElementById('state-initial').classList.remove('hidden');
+        return;
+      }
+
+      if (!data.has_token && data.pairing_code) {
+        // Mid-flow: code already requested. Don't yank the user off a card
+        // they're actively interacting with — only auto-route when nothing
+        // user-driven is currently visible (e.g. just landed on the page).
+        lastPairingCode = data.pairing_code;
+        const userDrivenStates = ['state-auth', 'state-mfa', 'state-subdomain', 'state-plan-picker', 'state-payment'];
+        const alreadyOnUserState = userDrivenStates.some(
+          id => !document.getElementById(id).classList.contains('hidden')
+        );
+        if (alreadyOnUserState) return;
+        if (authJwt) {
+          showSubdomain();
+        } else {
+          showAuth();
+        }
+        return;
+      }
+
+      // Has token — show tunnel state
+      if (data.ha_restarting) {
+        hideAll();
+        document.getElementById('state-restarting').classList.remove('hidden');
+        return;
+      }
+
+      const phase = data.tunnel_phase || 'idle';
+
+      if (data.connected || phase === 'connected') {
+        showConnected(data.url, data.pending_restart, data.pending_restart_reason);
+        return;
+      }
+
+      if (phase === 'error') {
+        showError(data.tunnel_error, data.tunnel_logs, data.url);
+        return;
+      }
+
+      // downloading, starting, reconnecting
+      showTunnelProgress(phase, data.url, data.tunnel_error, data.pending_restart, data.pending_restart_reason);
+    }
+
+    function showAuth() {
+      hideAll();
+      document.getElementById('state-auth').classList.remove('hidden');
+      hideError('auth-error');
+    }
+
+    function showSubdomain() {
+      hideAll();
+      document.getElementById('state-subdomain').classList.remove('hidden');
+      hideError('claim-error');
+    }
+
+    async function showSubscriptionRequired() {
+      hideAll();
+      document.getElementById('state-plan-picker').classList.remove('hidden');
+      hideError('plan-error');
+      if (!cloudConfig) {
+        try {
+          const resp = await fetch(CLOUD_ORIGIN + '/api/public-config');
+          cloudConfig = await resp.json();
+        } catch (e) {
+          showFieldError('plan-error', 'Failed to load plans');
+          return;
+        }
+      }
+      const container = document.getElementById('plan-options');
+      container.innerHTML = '';
+      for (const [tier, plan] of Object.entries(cloudConfig.plans || {})) {
+        for (const billing of ['monthly', 'annual']) {
+          const price = plan['price_' + billing];
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'plan-card';
+          card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; transition: border-color 0.15s;';
+          card.onmouseover = () => card.style.borderColor = 'var(--primary)';
+          card.onmouseout = () => card.style.borderColor = 'var(--border)';
+          card.onclick = () => startCheckout(tier + '_' + billing, plan.name + ' ' + (billing === 'annual' ? 'Annual' : 'Monthly'), price, billing);
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+              <strong style="font-size: 16px;">${plan.name}</strong>
+              <span style="font-size: 18px; color: var(--primary); font-weight: 600;">$${price}<span style="font-size: 12px; color: var(--muted); font-weight: 400;">/${billing === 'annual' ? 'yr' : 'mo'}</span></span>
+            </div>
+            <div style="font-size: 13px; color: var(--muted);">${(plan.features || []).join(' · ')}</div>
+          `;
+          container.appendChild(card);
+        }
+      }
+    }
+
+    function showPlanPicker() {
+      pendingPlan = null;
+      stripeElements = null;
+      showSubscriptionRequired();
+    }
+
+    async function startCheckout(planKey, planLabel, price, billing) {
+      pendingPlan = { key: planKey, label: planLabel, price, billing };
+      hideAll();
+      document.getElementById('state-payment').classList.remove('hidden');
+      document.getElementById('payment-title').textContent = 'Activate ' + planLabel;
+      document.getElementById('payment-summary').textContent = `$${price}/${billing === 'annual' ? 'year' : 'month'} — first charge today, cancel anytime`;
+      hideError('payment-error');
+
+      const submitBtn = document.getElementById('btn-payment-submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Loading...';
+
+      try {
+        const resp = await fetch(CLOUD_ORIGIN + '/api/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authJwt,
+          },
+          body: JSON.stringify({ plan: planKey }),
+        });
+        const data = await resp.json();
+        if (resp.status === 401) {
+          authJwt = null;
+          sessionStorage.removeItem('roamiq_jwt');
+          showAuth();
+          return;
+        }
+        if (!resp.ok || !data.client_secret) {
+          showFieldError('payment-error', data.error || 'Failed to start checkout');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Pay & Activate';
+          return;
+        }
+
+        if (!stripeInstance) {
+          stripeInstance = Stripe(cloudConfig.stripe_publishable_key);
+        }
+        stripeElements = stripeInstance.elements({
+          clientSecret: data.client_secret,
+          appearance: { theme: 'night', variables: { colorPrimary: '#00BFFF', colorBackground: '#1E1E1E' } },
+        });
+        const paymentElement = stripeElements.create('payment', { layout: 'tabs' });
+        document.getElementById('payment-element').innerHTML = '';
+        paymentElement.mount('#payment-element');
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Pay & Activate';
+      } catch (e) {
+        showFieldError('payment-error', 'Network error — try again');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Pay & Activate';
+      }
+    }
+
+    function setOverlayStep(step) {
+      const steps = document.querySelectorAll('#payment-overlay-steps .overlay-step');
+      const order = ['paying', 'activating', 'ready'];
+      const current = order.indexOf(step);
+      steps.forEach((el) => {
+        const idx = order.indexOf(el.dataset.step);
+        el.classList.remove('active', 'done');
+        if (idx < current) el.classList.add('done');
+        else if (idx === current) el.classList.add('active');
+      });
+    }
+
+    function showPaymentOverlay(title, sub, step) {
+      document.getElementById('payment-overlay-title').textContent = title;
+      document.getElementById('payment-overlay-sub').textContent = sub;
+      document.getElementById('payment-overlay').classList.remove('hidden');
+      setOverlayStep(step);
+    }
+
+    function hidePaymentOverlay() {
+      document.getElementById('payment-overlay').classList.add('hidden');
+    }
+
+    async function submitPayment(event) {
+      event.preventDefault();
+      if (!stripeInstance || !stripeElements) return;
+      hideError('payment-error');
+      showPaymentOverlay('Processing payment', 'Authorizing your card with Stripe...', 'paying');
+
+      const { error } = await stripeInstance.confirmPayment({
+        elements: stripeElements,
+        confirmParams: { return_url: window.location.href },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        hidePaymentOverlay();
+        showFieldError('payment-error', error.message || 'Payment failed');
+        return;
+      }
+
+      // Payment cleared — poll for the webhook to land the subscription row.
+      showPaymentOverlay('Activating subscription', 'Confirming with ROAMiQ Cloud...', 'activating');
+      let active = false;
+      for (let i = 0; i < 12; i++) {
+        try {
+          const resp = await fetch(CLOUD_ORIGIN + '/api/subscription', {
+            headers: { 'Authorization': 'Bearer ' + authJwt },
+          });
+          const sub = await resp.json();
+          if (sub.subscription && ['active', 'trialing'].includes(sub.subscription.status)) {
+            active = true;
+            break;
+          }
+        } catch (e) { /* keep trying */ }
+        await new Promise(r => setTimeout(r, 2500));
+      }
+
+      if (!active) {
+        hidePaymentOverlay();
+        showFieldError('payment-error', 'Payment processed but activation is delayed. Try Connect again in a moment.');
+        return;
+      }
+
+      showPaymentOverlay('Subscription active', 'Setting up your secure address...', 'ready');
+      await new Promise(r => setTimeout(r, 600));
+      hidePaymentOverlay();
+      showSubdomain();
+    }
+
+    async function submitMfaChallenge(event) {
+      event.preventDefault();
+      const code = document.getElementById('mfa-code').value.trim();
+      const btn = document.getElementById('btn-mfa-submit');
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      hideError('mfa-error');
+
+      try {
+        // Step 1: create challenge
+        const chResp = await fetch(CLOUD_ORIGIN + '/api/auth/mfa/challenge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authJwt },
+          body: JSON.stringify({ factor_id: mfaPending.factor_id }),
+        });
+        const chData = await chResp.json();
+        if (!chResp.ok) {
+          showFieldError('mfa-error', chData.error || 'Challenge failed');
+          btn.disabled = false; btn.textContent = 'Verify';
+          return;
+        }
+
+        // Step 2: verify
+        const vResp = await fetch(CLOUD_ORIGIN + '/api/auth/mfa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authJwt },
+          body: JSON.stringify({ factor_id: mfaPending.factor_id, challenge_id: chData.challenge_id, code }),
+        });
+        const vData = await vResp.json();
+        if (!vResp.ok) {
+          showFieldError('mfa-error', vData.error || 'Invalid code');
+          btn.disabled = false; btn.textContent = 'Verify';
+          return;
+        }
+
+        authJwt = vData.access_token;
+        sessionStorage.setItem('roamiq_jwt', authJwt);
+        mfaPending = null;
+        showSubdomain();
+      } catch (e) {
+        showFieldError('mfa-error', 'Network error — try again');
+        btn.disabled = false; btn.textContent = 'Verify';
+      }
+    }
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const signin = document.getElementById('tab-signin');
+      const signup = document.getElementById('tab-signup');
+      const submit = document.getElementById('btn-auth-submit');
+      const title = document.getElementById('auth-title');
+      const pwd = document.getElementById('auth-password');
+      if (mode === 'signin') {
+        signin.style.borderBottom = '2px solid var(--primary)';
+        signin.style.color = 'var(--text)';
+        signup.style.borderBottom = '2px solid transparent';
+        signup.style.color = 'var(--muted)';
+        submit.textContent = 'Sign In';
+        title.textContent = 'Sign in to ROAMiQ Cloud';
+        pwd.autocomplete = 'current-password';
+      } else {
+        signup.style.borderBottom = '2px solid var(--primary)';
+        signup.style.color = 'var(--text)';
+        signin.style.borderBottom = '2px solid transparent';
+        signin.style.color = 'var(--muted)';
+        submit.textContent = 'Create Account';
+        title.textContent = 'Create ROAMiQ Cloud Account';
+        pwd.autocomplete = 'new-password';
+      }
+      hideError('auth-error');
+    }
+
+    let oauthPopup = null;
+    let oauthPollAbort = null;
+
+    function newOAuthSessionId() {
+      // Random hex, 32 chars — matches /^[a-f0-9-]{8,64}$/ on cloud
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function signInOAuth(provider) {
+      hideError('auth-error');
+      // Cancel any in-flight poll from a prior click
+      if (oauthPollAbort) { try { oauthPollAbort.abort(); } catch (e) {} }
+      oauthPollAbort = new AbortController();
+
+      const sessionId = newOAuthSessionId();
+      const url = CLOUD_ORIGIN + '/auth/oauth-start?provider=' + encodeURIComponent(provider)
+                + '&session_id=' + sessionId;
+      const w = 500, h = 700;
+      const left = (window.screen.width - w) / 2;
+      const top = (window.screen.height - h) / 2;
+
+      // Open a fresh window each click — avoids cross-origin name collisions
+      // with stale popups from prior clicks
+      try { if (oauthPopup && !oauthPopup.closed) oauthPopup.close(); } catch (e) {}
+      oauthPopup = window.open(url, '_blank', `width=${w},height=${h},left=${left},top=${top}`);
+      if (!oauthPopup || oauthPopup.closed) {
+        showFieldError('auth-error', 'Popup blocked — allow popups for this page or use email + password.');
+        return;
+      }
+
+      // Poll the cloud for the session — server-mediated handoff avoids
+      // postMessage failures caused by Cross-Origin-Opener-Policy headers
+      // along the OAuth chain (Supabase, Google, GitHub).
+      pollOAuthSession(sessionId, oauthPollAbort.signal);
+    }
+
+    async function pollOAuthSession(sessionId, signal) {
+      const start = Date.now();
+      // Up to 5 minutes total
+      while (!signal.aborted && Date.now() - start < 5 * 60 * 1000) {
+        await new Promise(r => setTimeout(r, 1500));
+        if (signal.aborted) return;
+        try {
+          const resp = await fetch(CLOUD_ORIGIN + '/api/auth/oauth-poll?session_id=' + sessionId, { signal });
+          const d = await resp.json();
+          if (!d.ready) continue;
+          if (d.error) {
+            showAuth();
+            showFieldError('auth-error', 'Sign-in failed: ' + d.error);
+            return;
+          }
+          if (!d.access_token) {
+            showAuth();
+            showFieldError('auth-error', 'Sign-in failed — no session');
+            return;
+          }
+          authJwt = d.access_token;
+          sessionStorage.setItem('roamiq_jwt', authJwt);
+          // Try to close the popup — best-effort, browsers may block
+          try { if (oauthPopup && !oauthPopup.closed) oauthPopup.close(); } catch (e) {}
+
+          if (d.mfa_required && d.mfa_factor_id) {
+            mfaPending = { factor_id: d.mfa_factor_id };
+            hideAll();
+            document.getElementById('state-mfa').classList.remove('hidden');
+            hideError('mfa-error');
+            return;
+          }
+          showSubdomain();
+          return;
+        } catch (e) {
+          if (signal.aborted) return;
+          // network blip — keep trying
+        }
+      }
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const btn = document.getElementById('btn-auth-submit');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = authMode === 'signin' ? 'Signing in...' : 'Creating account...';
+      hideError('auth-error');
+
+      try {
+        const path = authMode === 'signin' ? '/api/auth/login' : '/api/auth/signup';
+        const resp = await fetch(CLOUD_ORIGIN + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          // Existing-email signup → flip to Sign In tab and prefill email
+          if (data.code === 'email_already_registered') {
+            switchAuthTab('signin');
+            document.getElementById('auth-email').value = email;
+            document.getElementById('auth-password').value = '';
+            document.getElementById('auth-password').focus();
+            showFieldError('auth-error', data.error);
+            return;
+          }
+          showFieldError('auth-error', data.error || 'Authentication failed');
+          return;
+        }
+        if (!data.access_token) {
+          showFieldError('auth-error', 'Check your email to confirm your account, then sign in.');
+          return;
+        }
+        authJwt = data.access_token;
+        sessionStorage.setItem('roamiq_jwt', authJwt);
+        if (data.mfa_required && data.mfa_factor_id) {
+          mfaPending = { factor_id: data.mfa_factor_id };
+          hideAll();
+          document.getElementById('state-mfa').classList.remove('hidden');
+          hideError('mfa-error');
+          return;
+        }
+        showSubdomain();
+      } catch (e) {
+        showFieldError('auth-error', 'Network error — try again');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    function showClaimOverlay(title, sub, step) {
+      document.getElementById('claim-overlay-title').textContent = title;
+      document.getElementById('claim-overlay-sub').textContent = sub;
+      document.getElementById('claim-overlay').classList.remove('hidden');
+      const steps = document.querySelectorAll('#claim-overlay-steps .overlay-step');
+      const order = ['reserve', 'tunnel', 'ready'];
+      const current = order.indexOf(step);
+      steps.forEach((el) => {
+        const idx = order.indexOf(el.dataset.step);
+        el.classList.remove('active', 'done');
+        if (idx < current) el.classList.add('done');
+        else if (idx === current) el.classList.add('active');
+      });
+    }
+
+    function hideClaimOverlay() {
+      document.getElementById('claim-overlay').classList.add('hidden');
+    }
+
+    async function refreshPairingCode() {
+      try {
+        const resp = await fetch(BASE + 'api/start-pairing', { method: 'POST' });
+        const d = await resp.json();
+        if (d.code) { lastPairingCode = d.code; return true; }
+      } catch (e) {}
+      return false;
+    }
+
+    async function submitClaim(event) {
+      event.preventDefault();
+      const subdomain = document.getElementById('subdomain-input').value.trim().toLowerCase();
+      hideError('claim-error');
+
+      if (!authJwt) { showAuth(); showFieldError('auth-error', 'Please sign in again'); return; }
+      if (!lastPairingCode) {
+        showClaimOverlay('Refreshing', 'Getting a fresh pairing code...', 'reserve');
+        const ok = await refreshPairingCode();
+        if (!ok) {
+          hideClaimOverlay();
+          showFieldError('claim-error', 'Could not get a pairing code — please reload');
+          return;
+        }
+      }
+
+      showClaimOverlay('Connecting', 'Reserving your address with ROAMiQ Cloud...', 'reserve');
+
+      async function doClaim() {
+        const resp = await fetch(CLOUD_ORIGIN + '/api/connect/auto-claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authJwt,
+          },
+          body: JSON.stringify({ code: lastPairingCode, subdomain }),
+        });
+        return { resp, data: await resp.json() };
+      }
+
+      try {
+        let { resp, data } = await doClaim();
+
+        // If the cloud says the code is invalid/expired, request a fresh one
+        // and retry once before failing.
+        if (resp.status === 400 && /pairing code/i.test(data.error || '')) {
+          showClaimOverlay('Refreshing', 'Pairing code expired — requesting a new one...', 'reserve');
+          const ok = await refreshPairingCode();
+          if (ok) ({ resp, data } = await doClaim());
+        }
+
+        if (resp.status === 401) {
+          authJwt = null;
+          sessionStorage.removeItem('roamiq_jwt');
+          hideClaimOverlay();
+          showAuth();
+          showFieldError('auth-error', 'Your session expired — please sign in again');
+          return;
+        }
+        if (resp.status === 402 || data.error === 'subscription_required') {
+          hideClaimOverlay();
+          showSubscriptionRequired();
+          return;
+        }
+        if (!resp.ok) {
+          hideClaimOverlay();
+          showFieldError('claim-error', data.error || 'Failed to connect');
+          return;
+        }
+
+        // Success — tunnel is being provisioned. Keep overlay visible while
+        // we short-circuit the pairing-poll loop and the tunnel comes up.
+        showClaimOverlay('Provisioning tunnel', 'Setting up your secure Cloudflare tunnel...', 'tunnel');
+        try { await fetch(BASE + 'api/poll-now', { method: 'POST' }); } catch (e) { /* poll loop will catch it */ }
+        polling = true;
+        pollStatus();
+        loadStatus();
+        // The poll will renderStatus() into state-tunnel / state-connected, which
+        // calls hideAll() on the way through — overlay disappears with it.
+      } catch (e) {
+        hideClaimOverlay();
+        showFieldError('claim-error', 'Network error — try again');
+      }
+    }
+
+    function showFieldError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function hideError(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function showTunnelProgress(phase, url, detail, pendingRestart, restartReason) {
+      hideAll();
+      document.getElementById('state-tunnel').classList.remove('hidden');
+
+      if (pendingRestart) {
+        document.getElementById('state-pending-restart').classList.remove('hidden');
+        if (restartReason) {
+          document.getElementById('restart-reason').textContent = restartReason;
+        }
+      }
+
+      const title = document.getElementById('tunnel-title');
+      const subtitle = document.getElementById('tunnel-subtitle');
+      const statusText = document.getElementById('tunnel-status-text');
+      const urlEl = document.getElementById('tunnel-url-pending');
+
+      const messages = {
+        downloading: ['Downloading tunnel software...', 'This may take a moment on first install'],
+        starting: ['Starting secure tunnel...', 'Connecting to Cloudflare network'],
+        reconnecting: ['Reconnecting...', detail || 'Attempting to re-establish tunnel'],
+        idle: ['Initializing...', 'Preparing tunnel connection'],
+      };
+
+      const [msg, sub] = messages[phase] || messages.idle;
+      title.textContent = 'Setting up tunnel...';
+      subtitle.textContent = sub;
+      statusText.textContent = msg;
+
+      if (url) {
+        urlEl.href = url;
+        urlEl.textContent = url;
+        urlEl.style.display = 'block';
+      }
+    }
+
+    function showConnected(url, pendingRestart, restartReason) {
+      hideAll();
+      document.getElementById('state-connected').classList.remove('hidden');
+      document.getElementById('backup-section').classList.remove('hidden');
+      const urlEl = document.getElementById('tunnel-url');
+      urlEl.href = url || '#';
+      urlEl.textContent = url || 'Setting up...';
+      // Keep polling at a slower cadence so revocations / disconnects from
+      // the cloud reflect in the UI within ~30s.
+      if (!polling) {
+        polling = true;
+        pollStatus(30000);
+      }
+      loadBackupStatus();
+
+      if (pendingRestart) {
+        document.getElementById('state-pending-restart').classList.remove('hidden');
+        if (restartReason) {
+          document.getElementById('restart-reason').textContent = restartReason;
+        }
+      }
+    }
+
+    function showError(error, logs, url) {
+      hideAll();
+      document.getElementById('state-error').classList.remove('hidden');
+      document.getElementById('error-message').textContent = error || 'Unable to establish tunnel connection';
+
+      const logsEl = document.getElementById('error-logs');
+      if (logs && logs.length > 0) {
+        logsEl.textContent = logs.slice(-8).join('\n');
+        logsEl.style.display = 'block';
+      }
+    }
+
+    async function startPairing() {
+      const btn = document.getElementById('btn-pair');
+      btn.disabled = true;
+      btn.textContent = 'Getting code...';
+
+      try {
+        const resp = await fetch(BASE + 'api/start-pairing', { method: 'POST' });
+        const data = await resp.json();
+
+        if (data.code) {
+          lastPairingCode = data.code;
+          polling = true;
+          pollStatus();
+          // Move straight into auth (or subdomain if already signed in)
+          if (authJwt) {
+            showSubdomain();
+          } else {
+            showAuth();
+          }
+        } else {
+          btn.textContent = 'Failed \u2014 try again';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        btn.textContent = 'Failed \u2014 try again';
+        btn.disabled = false;
+      }
+    }
+
+    async function pollStatus(intervalMs) {
+      const interval = intervalMs || 3000;
+      while (polling) {
+        await new Promise(r => setTimeout(r, interval));
+        try {
+          const resp = await fetch(BASE + 'api/status');
+          const data = await resp.json();
+          renderStatus(data);
+        } catch (e) {
+          // keep polling
+        }
+      }
+    }
+
+    // ─── Restart ────────────────────────────────────────────────
+
+    async function restartHA() {
+      const btn = document.getElementById('btn-restart');
+      btn.disabled = true;
+      btn.textContent = 'Restarting...';
+
+      try {
+        const resp = await fetch(BASE + 'api/restart-ha', { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) {
+          document.getElementById('state-pending-restart').classList.add('hidden');
+          // Switch to restarting state
+          document.getElementById('state-restarting').classList.remove('hidden');
+          // Poll until HA is back
+          polling = true;
+          pollStatus();
+        } else {
+          btn.textContent = 'Restart Failed — try again';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        btn.textContent = 'Restart Failed — try again';
+        btn.disabled = false;
+      }
+    }
+
+    // ─── Backup ─────────────────────────────────────────────────
+
+    async function triggerBackup() {
+      const btn = document.getElementById('btn-backup');
+      btn.disabled = true;
+      btn.textContent = 'Starting...';
+      hideBackupMessages();
+
+      try {
+        const resp = await fetch(BASE + 'api/backup/trigger', { method: 'POST' });
+        const data = await resp.json();
+        if (data.error) {
+          showBackupError(data.error);
+          btn.disabled = false;
+          btn.textContent = 'Back Up Now';
+          return;
+        }
+        pollBackupStatus();
+      } catch (e) {
+        showBackupError('Failed to start backup');
+        btn.disabled = false;
+        btn.textContent = 'Back Up Now';
+      }
+    }
+
+    // Restore progress poll. Maps cloud-side restore_jobs.status into
+    // user-facing phase labels and progress %. Runs forever as long as
+    // the backup section is mounted; cheap (5s tick).
+    const RESTORE_PHASE_LABELS = {
+      queued: 'Queued — waiting for the addon to pick up',
+      preflight: 'Checking Home Assistant is healthy',
+      snapshotting: 'Taking a safety snapshot first',
+      downloading: 'Downloading backup from cloud',
+      decrypting: 'Decrypting backup',
+      extracting: 'Handing off to Supervisor',
+      applying: 'Restoring — Home Assistant will restart',
+      rebooting: 'Home Assistant restarting',
+      verifying: 'Waiting for Home Assistant to come back',
+    };
+    const PCT_FOR_PHASE = {
+      queued: 5,
+      preflight: 10,
+      snapshotting: 25,
+      downloading: 45,
+      decrypting: 55,
+      extracting: 65,
+      applying: 80,
+      rebooting: 90,
+      verifying: 95,
+    };
+
+    async function pollRestoreStatus() {
+      const banner = document.getElementById('restore-status');
+      try {
+        const resp = await fetch(BASE + 'api/restore/status');
+        const data = await resp.json();
+        const job = data && data.job;
+        if (!job) {
+          banner.classList.add('hidden');
+          return;
+        }
+        banner.classList.remove('hidden');
+        const stepText = RESTORE_PHASE_LABELS[job.status] || job.status;
+        document.getElementById('restore-step-text').textContent = stepText;
+        const pct = job.progress_pct || PCT_FOR_PHASE[job.status] || 50;
+        document.getElementById('restore-pct-text').textContent = pct + '%';
+        document.getElementById('restore-bar').style.width = pct + '%';
+      } catch (e) {
+        // network blip — leave banner state alone, retry next tick
+      }
+    }
+    setInterval(pollRestoreStatus, 5000);
+    pollRestoreStatus();
+
+    async function pollBackupStatus() {
+      const phaseLabels = {
+        creating: 'Creating HA backup...',
+        downloading: 'Downloading backup...',
+        uploading: 'Uploading to cloud...',
+      };
+
+      for (let i = 0; i < 360; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+          const resp = await fetch(BASE + 'api/backup/status');
+          const s = await resp.json();
+
+          if (s.in_progress) {
+            showBackupProgress(phaseLabels[s.phase] || 'Working...');
+          } else {
+            hideBackupMessages();
+            if (s.last_error) {
+              showBackupError(s.last_error);
+            } else {
+              showToast();
+            }
+            if (s.last_backup) {
+              document.getElementById('backup-last-time').textContent = new Date(s.last_backup).toLocaleString();
+            }
+            const btn = document.getElementById('btn-backup');
+            btn.disabled = false;
+            btn.textContent = 'Back Up Now';
+            return;
+          }
+        } catch (e) { /* keep polling */ }
+      }
+    }
+
+    function showBackupProgress(text) {
+      hideBackupMessages();
+      document.getElementById('backup-status-msg').classList.remove('hidden');
+      document.getElementById('backup-phase-text').textContent = text;
+    }
+
+    function showBackupError(text) {
+      hideBackupMessages();
+      document.getElementById('backup-error').classList.remove('hidden');
+      document.getElementById('backup-error-text').textContent = text;
+    }
+
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    function hideBackupMessages() {
+      document.getElementById('backup-status-msg').classList.add('hidden');
+      document.getElementById('backup-error').classList.add('hidden');
+      document.getElementById('backup-success').classList.add('hidden');
+    }
+
+    async function loadBackupStatus() {
+      try {
+        const resp = await fetch(BASE + 'api/backup/status');
+        const s = await resp.json();
+        if (s.last_backup) {
+          document.getElementById('backup-last-time').textContent = new Date(s.last_backup).toLocaleString();
+        }
+        if (s.in_progress) {
+          const btn = document.getElementById('btn-backup');
+          btn.disabled = true;
+          btn.textContent = 'Backup in progress...';
+          pollBackupStatus();
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // Initial load
+    loadStatus();
+  </script>
+</body>
+</html>

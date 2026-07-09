@@ -1,0 +1,44 @@
+name: ROAMiQ Cloud
+version: 0.6.20
+# v0.6.16: slug renamed roamiq_connect -> roamiq_cloud to match the folder and
+# display name. NOTE: the slug is the add-on's persistent install identity, so
+# this rename ORPHANS existing installs (fresh /data volume => lost Cloudflare
+# tunnel token + instance_id). Existing customers must REINSTALL and re-pair.
+# (Accepted trade-off; do NOT revert to roamiq_connect for "continuity".)
+slug: roamiq_cloud
+description: Secure remote access for Home Assistant via Cloudflare Tunnel
+url: https://cloud.roamiq.com
+arch:
+  - aarch64
+  - amd64
+  - armv7
+startup: application
+boot: auto
+init: false
+ingress: true
+ingress_port: 8100
+panel_icon: mdi:cloud-lock
+panel_title: ROAMiQ Cloud
+panel_admin: true
+
+options:
+  cloud_base_url: "https://cloud.roamiq.com"
+  enable_ai_bubble: true
+schema:
+  cloud_base_url: "url"
+  # Show the floating ROAMiQ AI chat bubble on this instance's dashboards.
+  # Default ON. When turned OFF, the add-on removes the AI card's Lovelace
+  # resource so the bubble stops appearing (tier gating still applies when ON).
+  enable_ai_bubble: "bool?"
+  # Debug-only: permit a non-https / non-roamiq.com cloud_base_url (local dev
+  # against a Next.js on http://host.docker.internal:3000). Production installs
+  # must leave this false — get_cloud_base_url() rejects insecure URLs otherwise.
+  allow_insecure_cloud_url: "bool?"
+
+hassio_api: true
+hassio_role: admin
+homeassistant_api: true
+auth_api: true
+
+map:
+  - config:rw
