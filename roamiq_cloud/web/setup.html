@@ -565,6 +565,10 @@
     let stripeElements = null;
     let cloudConfig = null;
     let pendingPlan = null;
+    // Tiers gated as "Coming Soon" — shown locked in the plan picker and blocked
+    // from checkout. Mirrors the cloud pricing page's COMING_SOON_TIERS gate.
+    // Empty this array to relaunch a tier.
+    const COMING_SOON_TIERS = ['protect', 'genius'];
 
     function hideAll() {
       ['state-initial', 'state-auth', 'state-mfa', 'state-subdomain', 'state-plan-picker', 'state-payment', 'state-restarting', 'state-tunnel', 'state-connected', 'state-error', 'state-pending-restart'].forEach(
@@ -663,6 +667,24 @@
       const container = document.getElementById('plan-options');
       container.innerHTML = '';
       for (const [tier, plan] of Object.entries(cloudConfig.plans || {})) {
+        // Coming-soon tiers render as ONE locked, badged card (no billing
+        // choice, no checkout) instead of the usual monthly + annual pair.
+        if (COMING_SOON_TIERS.includes(tier)) {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'plan-card';
+          card.disabled = true;
+          card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: not-allowed; text-align: left; color: var(--text); font-family: inherit; opacity: 0.6;';
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+              <strong style="font-size: 16px;">${plan.name}</strong>
+              <span style="font-size: 11px; color: var(--primary); font-weight: 600; border: 1px solid var(--primary); border-radius: 6px; padding: 2px 8px;">Coming Soon!</span>
+            </div>
+            <div style="font-size: 13px; color: var(--muted);">${(plan.features || []).join(' · ')}</div>
+          `;
+          container.appendChild(card);
+          continue;
+        }
         for (const billing of ['monthly', 'annual']) {
           const price = plan['price_' + billing];
           const card = document.createElement('button');
@@ -691,6 +713,9 @@
     }
 
     async function startCheckout(planKey, planLabel, price, billing) {
+      // Defensive: never start checkout for a coming-soon tier (picker renders
+      // these locked, so this is belt-and-suspenders).
+      if (COMING_SOON_TIERS.includes((planKey || '').split('_')[0])) return;
       pendingPlan = { key: planKey, label: planLabel, price, billing };
       hideAll();
       document.getElementById('state-payment').classList.remove('hidden');

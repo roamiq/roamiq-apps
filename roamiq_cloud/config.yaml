@@ -1,5 +1,17 @@
 name: ROAMiQ Cloud
-version: 0.6.20
+version: 0.6.22
+# v0.6.22: publish-only bump for the re-cythonized multi-arch build. The public
+# add-on repo (roamiq/roamiq-apps) was last published at 0.6.20, so this build
+# is the first to ship v0.6.21's external_url fix PLUS two changesets that
+# landed WITHOUT their own version bump: the "Coming Soon!" gate on the
+# Protect/Genius tiers in the add-on UI (#452) and opt-in /share + /media
+# folder backups (#458). Bumping to 0.6.22 so Supervisor actually offers the
+# update and the shipped version number matches the shipped contents.
+# v0.6.21: set homeassistant.external_url to the assigned tunnel subdomain on
+# pairing/startup + a Core-API self-check that warns (loudly, in the addon log)
+# when external_url is unset/mismatched. Fixes IndieAuth/OAuth add-on flows
+# (e.g. Music Assistant "add music source") 502ing over the tunnel because HA
+# didn't recognise its own <subdomain>.cloud.roamiq.com external URL.
 # v0.6.16: slug renamed roamiq_connect -> roamiq_cloud to match the folder and
 # display name. NOTE: the slug is the add-on's persistent install identity, so
 # this rename ORPHANS existing installs (fresh /data volume => lost Cloudflare
