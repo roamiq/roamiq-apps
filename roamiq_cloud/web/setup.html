@@ -336,10 +336,14 @@
 
     <!-- State: Auth (sign in / create account) -->
     <div id="state-auth" class="card hidden">
-      <h2 id="auth-title">Create ROAMiQ Cloud Account</h2>
+      <!-- Sign In is the default tab, matching cloud.roamiq.com. Customers sign
+           up on the website first and install the add-on from the /devices
+           link, so this screen is almost always reached by someone who already
+           has an account. -->
+      <h2 id="auth-title">Sign in to ROAMiQ Cloud</h2>
       <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border);">
-        <button class="auth-tab" id="tab-signin" onclick="switchAuthTab('signin')" style="background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent;">Sign In</button>
-        <button class="auth-tab active" id="tab-signup" onclick="switchAuthTab('signup')" style="background: none; border: none; color: var(--text); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--primary); font-weight: 600;">Create Account</button>
+        <button class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')" style="background: none; border: none; color: var(--text); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--primary); font-weight: 600;">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')" style="background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent;">Create Account</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
         <button type="button" class="btn-oauth" onclick="signInOAuth('google')" style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 10px 16px; background: white; color: #1f1f1f; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;">
@@ -360,9 +364,9 @@
         <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Email</label>
         <input type="email" id="auth-email" required autocomplete="email" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; margin-bottom: 12px;">
         <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Password</label>
-        <input type="password" id="auth-password" required minlength="8" autocomplete="new-password" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px;">
+        <input type="password" id="auth-password" required minlength="8" autocomplete="current-password" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px;">
         <div id="auth-error" class="hidden status status-error" style="margin-top: 12px;"></div>
-        <button type="submit" class="btn btn-primary" id="btn-auth-submit">Create Account</button>
+        <button type="submit" class="btn btn-primary" id="btn-auth-submit">Sign In</button>
       </form>
     </div>
 
@@ -559,12 +563,16 @@
     let polling = false;
     let lastPairingCode = null;
     let authJwt = sessionStorage.getItem('roamiq_jwt') || null;
-    let authMode = 'signup';
+    // Must match the initially-active tab + button label in the markup.
+    let authMode = 'signin';
     let mfaPending = null;  // {factor_id} when MFA challenge needed
     let stripeInstance = null;
     let stripeElements = null;
     let cloudConfig = null;
     let pendingPlan = null;
+    // 'payment' (PaymentIntent due) or 'setup' ($0 first invoice -> SetupIntent).
+    let checkoutMode = 'payment';
+    let checkoutSubscriptionId = null;
     // Tiers gated as "Coming Soon" — shown locked in the plan picker and blocked
     // from checkout. Mirrors the cloud pricing page's COMING_SOON_TIERS gate.
     // Empty this array to relaunch a tier.
@@ -666,6 +674,12 @@
       }
       const container = document.getElementById('plan-options');
       container.innerHTML = '';
+
+      // Monthly/annual toggle, mirroring cloud.roamiq.com/pricing — one card
+      // per tier instead of a monthly+annual pair for each. Annual == 10x
+      // monthly on every tier, i.e. ~17% off / two months free.
+      container.appendChild(buildBillingToggle());
+
       for (const [tier, plan] of Object.entries(cloudConfig.plans || {})) {
         // Coming-soon tiers render as ONE locked, badged card (no billing
         // choice, no checkout) instead of the usual monthly + annual pair.
@@ -685,25 +699,73 @@
           container.appendChild(card);
           continue;
         }
-        for (const billing of ['monthly', 'annual']) {
-          const price = plan['price_' + billing];
-          const card = document.createElement('button');
-          card.type = 'button';
-          card.className = 'plan-card';
-          card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; transition: border-color 0.15s;';
-          card.onmouseover = () => card.style.borderColor = 'var(--primary)';
-          card.onmouseout = () => card.style.borderColor = 'var(--border)';
-          card.onclick = () => startCheckout(tier + '_' + billing, plan.name + ' ' + (billing === 'annual' ? 'Annual' : 'Monthly'), price, billing);
-          card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-              <strong style="font-size: 16px;">${plan.name}</strong>
-              <span style="font-size: 18px; color: var(--primary); font-weight: 600;">$${price}<span style="font-size: 12px; color: var(--muted); font-weight: 400;">/${billing === 'annual' ? 'yr' : 'mo'}</span></span>
-            </div>
-            <div style="font-size: 13px; color: var(--muted);">${(plan.features || []).join(' · ')}</div>
-          `;
-          container.appendChild(card);
-        }
+        const billing = planBillingPeriod;
+        const price = plan['price_' + billing];
+        const monthly = Number(plan.price_monthly);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'plan-card';
+        card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; transition: border-color 0.15s;';
+        card.onmouseover = () => card.style.borderColor = 'var(--primary)';
+        card.onmouseout = () => card.style.borderColor = 'var(--border)';
+        card.onclick = () => startCheckout(tier + '_' + billing, plan.name + ' ' + (billing === 'annual' ? 'Annual' : 'Monthly'), price, billing);
+        const perMonth = billing === 'annual' && Number.isFinite(Number(price))
+          ? (Number(price) / 12).toFixed(2).replace(/\.00$/, '')
+          : null;
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <strong style="font-size: 16px;">${plan.name}</strong>
+            <span style="font-size: 18px; color: var(--primary); font-weight: 600;">$${price}<span style="font-size: 12px; color: var(--muted); font-weight: 400;">/${billing === 'annual' ? 'yr' : 'mo'}</span></span>
+          </div>
+          ${perMonth ? `<div style="text-align:right;font-size:11px;color:var(--muted);margin:-4px 0 6px;">$${perMonth}/mo billed yearly${Number.isFinite(monthly) ? ` · save $${(monthly * 12 - Number(price)).toFixed(0)}` : ''}</div>` : ''}
+          <div style="font-size: 13px; color: var(--muted);">${(plan.features || []).join(' · ')}</div>
+        `;
+        container.appendChild(card);
       }
+    }
+
+    // Selected billing period in the plan picker; defaults to annual to match
+    // cloud.roamiq.com.
+    let planBillingPeriod = 'annual';
+
+    function setPlanBillingPeriod(period) {
+      planBillingPeriod = period === 'monthly' ? 'monthly' : 'annual';
+      void showSubscriptionRequired();
+    }
+
+    function buildBillingToggle() {
+      const annual = planBillingPeriod === 'annual';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;justify-content:center;margin-bottom:4px;';
+      const pill = document.createElement('div');
+      pill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:5px;';
+      const mk = (label, active, onClick, badge) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.style.cssText =
+          'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;' +
+          'padding:8px 16px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;' +
+          'transition:background-color 0.15s,color 0.15s;' +
+          (active
+            ? 'background:var(--primary);color:#001016;'
+            : 'background:transparent;color:var(--muted);');
+        b.textContent = label;
+        if (badge) {
+          const s = document.createElement('span');
+          s.textContent = badge;
+          s.style.cssText =
+            'border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;border:1px solid ' +
+            (active ? 'rgba(0,16,22,0.25);background:rgba(0,16,22,0.12);color:#001016;'
+                    : 'rgba(34,201,138,0.35);background:rgba(34,201,138,0.08);color:#22c98a;');
+          b.appendChild(s);
+        }
+        b.onclick = onClick;
+        return b;
+      };
+      pill.appendChild(mk('Monthly', !annual, () => setPlanBillingPeriod('monthly')));
+      pill.appendChild(mk('Annual', annual, () => setPlanBillingPeriod('annual'), 'Save 17%'));
+      wrap.appendChild(pill);
+      return wrap;
     }
 
     function showPlanPicker() {
@@ -750,6 +812,13 @@
           return;
         }
 
+        // See index.html for the full note: /api/checkout returns
+        // mode:"payment" or mode:"setup" ($0 first invoice, e.g. a 100%-off
+        // promo -> SetupIntent). submitPayment() MUST branch on this or
+        // confirmPayment stalls forever on a SetupIntent secret.
+        checkoutMode = data.mode === 'setup' ? 'setup' : 'payment';
+        checkoutSubscriptionId = data.subscription_id || null;
+
         if (!stripeInstance) {
           stripeInstance = Stripe(cloudConfig.stripe_publishable_key);
         }
@@ -762,7 +831,7 @@
         paymentElement.mount('#payment-element');
 
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Pay & Activate';
+        submitBtn.textContent = checkoutMode === 'setup' ? 'Save card & Activate' : 'Pay & Activate';
       } catch (e) {
         showFieldError('payment-error', 'Network error — try again');
         submitBtn.disabled = false;
@@ -797,17 +866,56 @@
       event.preventDefault();
       if (!stripeInstance || !stripeElements) return;
       hideError('payment-error');
-      showPaymentOverlay('Processing payment', 'Authorizing your card with Stripe...', 'paying');
 
-      const { error } = await stripeInstance.confirmPayment({
-        elements: stripeElements,
-        confirmParams: { return_url: window.location.href },
-        redirect: 'if_required',
-      });
+      const isSetup = checkoutMode === 'setup';
+      showPaymentOverlay(
+        isSetup ? 'Saving your card' : 'Processing payment',
+        isSetup ? 'Securely storing your card with Stripe...' : 'Authorizing your card with Stripe...',
+        'paying'
+      );
+
+      let error;
+      if (isSetup) {
+        const res = await stripeInstance.confirmSetup({
+          elements: stripeElements,
+          confirmParams: { return_url: window.location.href },
+          redirect: 'if_required',
+        });
+        error = res.error;
+        if (!error) {
+          try {
+            const attach = await fetch(CLOUD_ORIGIN + '/api/checkout/attach-payment-method', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authJwt,
+              },
+              body: JSON.stringify({
+                subscription_id: checkoutSubscriptionId,
+                setup_intent_id: res.setupIntent && res.setupIntent.id,
+              }),
+            });
+            if (!attach.ok) {
+              // Non-fatal: nothing was due so the sub is already active; the
+              // card just isn't the default yet.
+              console.warn('attach-payment-method failed:', await attach.text());
+            }
+          } catch (e) {
+            console.warn('attach-payment-method threw:', e);
+          }
+        }
+      } else {
+        const res = await stripeInstance.confirmPayment({
+          elements: stripeElements,
+          confirmParams: { return_url: window.location.href },
+          redirect: 'if_required',
+        });
+        error = res.error;
+      }
 
       if (error) {
         hidePaymentOverlay();
-        showFieldError('payment-error', error.message || 'Payment failed');
+        showFieldError('payment-error', error.message || (isSetup ? "We couldn't save your card" : 'Payment failed'));
         return;
       }
 

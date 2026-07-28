@@ -1,5 +1,16 @@
 name: ROAMiQ Cloud
-version: 0.6.22
+version: 0.6.23
+# v0.6.23: BLOCKING FIX — the plan picker called Stripe's confirmPayment() for
+# every checkout, but /api/checkout returns mode:"setup" with a SetupIntent
+# secret whenever the first invoice is $0. confirmPayment never resolves on a
+# SetupIntent, so the overlay froze on "Authorizing card" forever while the
+# subscription was in fact already created server-side. Now branches to
+# confirmSetup + /api/checkout/attach-payment-method, matching the cloud
+# checkout drawer. Also: monthly/annual toggle in the plan picker (mirrors
+# cloud.roamiq.com instead of listing every tier twice), current-plan +
+# storage-used chip in the connected header, Sign In as the default auth tab,
+# and the Cloud Backups card no longer flickers every 3 s or shows a stale
+# "Last backup" above an empty list.
 # v0.6.22: publish-only bump for the re-cythonized multi-arch build. The public
 # add-on repo (roamiq/roamiq-apps) was last published at 0.6.20, so this build
 # is the first to ship v0.6.21's external_url fix PLUS two changesets that

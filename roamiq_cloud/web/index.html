@@ -268,6 +268,26 @@
       color: var(--text);
       white-space: nowrap;
     }
+    /* Current-plan chip. Customers had no way to tell which plan the add-on
+       was running on without going to cloud.roamiq.com. */
+    .status-header .sh-plan {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border: 1px solid var(--primary);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .status-header .sh-plan .sh-plan-usage {
+      font-weight: 500;
+      color: var(--muted);
+    }
     .status-header .sh-url {
       flex: 1;
       min-width: 140px;
@@ -431,10 +451,17 @@
 
     <!-- State: Auth (sign in / create account) -->
     <div id="state-auth" class="card hidden">
-      <h2 id="auth-title">Create ROAMiQ Cloud Account</h2>
+      <!-- Sign In is the default tab, matching cloud.roamiq.com (which renders
+           AuthTabs with active="signin"). In the real funnel the customer signs
+           up on the website and only then installs the add-on from the link on
+           /devices, so by the time anyone reaches this screen they almost always
+           already have an account. Defaulting to Create Account put the rare
+           case first, and after an add-on reinstall it actively invited people
+           to make a second account. -->
+      <h2 id="auth-title">Sign in to ROAMiQ Cloud</h2>
       <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border);">
-        <button class="auth-tab" id="tab-signin" onclick="switchAuthTab('signin')" style="background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent;">Sign In</button>
-        <button class="auth-tab active" id="tab-signup" onclick="switchAuthTab('signup')" style="background: none; border: none; color: var(--text); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--primary); font-weight: 600;">Create Account</button>
+        <button class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')" style="background: none; border: none; color: var(--text); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid var(--primary); font-weight: 600;">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')" style="background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer; border-bottom: 2px solid transparent;">Create Account</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
         <button type="button" class="btn-oauth" onclick="signInOAuth('google')" style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 10px 16px; background: white; color: #1f1f1f; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;">
@@ -455,9 +482,9 @@
         <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Email</label>
         <input type="email" id="auth-email" required autocomplete="email" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; margin-bottom: 12px;">
         <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px;">Password</label>
-        <input type="password" id="auth-password" required minlength="8" autocomplete="new-password" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px;">
+        <input type="password" id="auth-password" required minlength="8" autocomplete="current-password" style="width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px;">
         <div id="auth-error" class="hidden status status-error" style="margin-top: 12px;"></div>
-        <button type="submit" class="btn btn-primary" id="btn-auth-submit">Create Account</button>
+        <button type="submit" class="btn btn-primary" id="btn-auth-submit">Sign In</button>
       </form>
     </div>
 
@@ -558,6 +585,7 @@
     <div id="state-connected" class="status-header hidden">
       <span class="sh-dot">&#9679;</span>
       <span class="sh-label">Connected &middot; secured by Cloudflare</span>
+      <span id="sh-plan" class="sh-plan hidden" title="Your ROAMiQ Cloud plan"></span>
       <a id="tunnel-url" href="#" target="_blank" class="sh-url"
          onclick="return rqOpenExternal(event, this.href);">loading...</a>
       <a id="sh-open" href="#" class="sh-btn"
@@ -880,12 +908,17 @@
     let polling = false;
     let lastPairingCode = null;
     let authJwt = sessionStorage.getItem('roamiq_jwt') || null;
-    let authMode = 'signup';
+    // Must match the initially-active tab + button label in the markup above.
+    let authMode = 'signin';
     let mfaPending = null;  // {factor_id} when MFA challenge needed
     let stripeInstance = null;
     let stripeElements = null;
     let cloudConfig = null;
     let pendingPlan = null;
+    // 'payment' (PaymentIntent due) or 'setup' ($0 first invoice -> SetupIntent).
+    // Set from /api/checkout's `mode`; drives confirmPayment vs confirmSetup.
+    let checkoutMode = 'payment';
+    let checkoutSubscriptionId = null;
     // Tiers gated as "Coming Soon" — shown locked in the plan picker and blocked
     // from checkout. Mirrors the cloud pricing page's COMING_SOON_TIERS gate.
     // Empty this array to relaunch a tier.
@@ -1134,6 +1167,15 @@
       }
       const container = document.getElementById('plan-options');
       container.innerHTML = '';
+
+      // Monthly/annual toggle, mirroring cloud.roamiq.com/pricing. Previously
+      // every tier rendered BOTH billing periods as separate cards, so three
+      // tiers produced six rows and the gated pair doubled up too. One card
+      // per tier + a period toggle matches the web and halves the list.
+      // Annual == 10x monthly on all three tiers, so the discount is ~17%
+      // (exactly two months free) — same claim the web makes.
+      container.appendChild(buildBillingToggle());
+
       for (const [tier, plan] of Object.entries(cloudConfig.plans || {})) {
         // Coming-soon tiers render as ONE locked, badged card (no billing
         // choice, no checkout) instead of the usual monthly + annual pair.
@@ -1153,25 +1195,76 @@
           container.appendChild(card);
           continue;
         }
-        for (const billing of ['monthly', 'annual']) {
-          const price = plan['price_' + billing];
-          const card = document.createElement('button');
-          card.type = 'button';
-          card.className = 'plan-card';
-          card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; transition: border-color 0.15s;';
-          card.onmouseover = () => card.style.borderColor = 'var(--primary)';
-          card.onmouseout = () => card.style.borderColor = 'var(--border)';
-          card.onclick = () => startCheckout(tier + '_' + billing, plan.name + ' ' + (billing === 'annual' ? 'Annual' : 'Monthly'), price, billing);
-          card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-              <strong style="font-size: 16px;">${plan.name}</strong>
-              <span style="font-size: 18px; color: var(--primary); font-weight: 600;">$${price}<span style="font-size: 12px; color: var(--muted); font-weight: 400;">/${billing === 'annual' ? 'yr' : 'mo'}</span></span>
-            </div>
-            <div style="font-size: 13px; color: var(--muted);">${(plan.features || []).join(' · ')}</div>
-          `;
-          container.appendChild(card);
-        }
+        const billing = planBillingPeriod;
+        const price = plan['price_' + billing];
+        const monthly = Number(plan.price_monthly);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'plan-card';
+        card.style.cssText = 'background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; text-align: left; color: var(--text); font-family: inherit; transition: border-color 0.15s;';
+        card.onmouseover = () => card.style.borderColor = 'var(--primary)';
+        card.onmouseout = () => card.style.borderColor = 'var(--border)';
+        card.onclick = () => startCheckout(tier + '_' + billing, plan.name + ' ' + (billing === 'annual' ? 'Annual' : 'Monthly'), price, billing);
+        // On annual, show the real annual figure as the headline (that IS what
+        // gets charged today) with the per-month equivalent underneath, so the
+        // price shown always matches the amount billed.
+        const perMonth = billing === 'annual' && Number.isFinite(Number(price))
+          ? (Number(price) / 12).toFixed(2).replace(/\.00$/, '')
+          : null;
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <strong style="font-size: 16px;">${plan.name}</strong>
+            <span style="font-size: 18px; color: var(--primary); font-weight: 600;">$${price}<span style="font-size: 12px; color: var(--muted); font-weight: 400;">/${billing === 'annual' ? 'yr' : 'mo'}</span></span>
+          </div>
+          ${perMonth ? `<div style="text-align:right;font-size:11px;color:var(--muted);margin:-4px 0 6px;">$${perMonth}/mo billed yearly${Number.isFinite(monthly) ? ` · save $${(monthly * 12 - Number(price)).toFixed(0)}` : ''}</div>` : ''}
+          <div style="font-size: 13px; color: var(--muted);">${(plan.features || []).join(' · ')}</div>
+        `;
+        container.appendChild(card);
       }
+    }
+
+    // Selected billing period in the plan picker. Defaults to annual to match
+    // cloud.roamiq.com (anonymous visitors there default to annual too).
+    let planBillingPeriod = 'annual';
+
+    function setPlanBillingPeriod(period) {
+      planBillingPeriod = period === 'monthly' ? 'monthly' : 'annual';
+      void showSubscriptionRequired();
+    }
+
+    function buildBillingToggle() {
+      const annual = planBillingPeriod === 'annual';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;justify-content:center;margin-bottom:4px;';
+      const pill = document.createElement('div');
+      pill.style.cssText = 'display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:5px;';
+      const mk = (label, active, onClick, badge) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.style.cssText =
+          'display:inline-flex;align-items:center;gap:7px;border:none;border-radius:999px;' +
+          'padding:8px 16px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;' +
+          'transition:background-color 0.15s,color 0.15s;' +
+          (active
+            ? 'background:var(--primary);color:#001016;'
+            : 'background:transparent;color:var(--muted);');
+        b.textContent = label;
+        if (badge) {
+          const s = document.createElement('span');
+          s.textContent = badge;
+          s.style.cssText =
+            'border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;border:1px solid ' +
+            (active ? 'rgba(0,16,22,0.25);background:rgba(0,16,22,0.12);color:#001016;'
+                    : 'rgba(34,201,138,0.35);background:rgba(34,201,138,0.08);color:#22c98a;');
+          b.appendChild(s);
+        }
+        b.onclick = onClick;
+        return b;
+      };
+      pill.appendChild(mk('Monthly', !annual, () => setPlanBillingPeriod('monthly')));
+      pill.appendChild(mk('Annual', annual, () => setPlanBillingPeriod('annual'), 'Save 17%'));
+      wrap.appendChild(pill);
+      return wrap;
     }
 
     function showPlanPicker() {
@@ -1218,6 +1311,15 @@
           return;
         }
 
+        // /api/checkout returns mode:"payment" (a PaymentIntent is due) or
+        // mode:"setup" (first invoice is $0 — e.g. a 100%-off promo code — so
+        // Stripe creates no PaymentIntent and hands back a SetupIntent
+        // instead). submitPayment() MUST branch on this: calling
+        // confirmPayment with a SetupIntent client secret never resolves and
+        // the overlay hangs on "Authorizing card" forever.
+        checkoutMode = data.mode === 'setup' ? 'setup' : 'payment';
+        checkoutSubscriptionId = data.subscription_id || null;
+
         if (!stripeInstance) {
           stripeInstance = Stripe(cloudConfig.stripe_publishable_key);
         }
@@ -1230,7 +1332,7 @@
         paymentElement.mount('#payment-element');
 
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Pay & Activate';
+        submitBtn.textContent = checkoutMode === 'setup' ? 'Save card & Activate' : 'Pay & Activate';
       } catch (e) {
         showFieldError('payment-error', 'Network error — try again');
         submitBtn.disabled = false;
@@ -1265,17 +1367,61 @@
       event.preventDefault();
       if (!stripeInstance || !stripeElements) return;
       hideError('payment-error');
-      showPaymentOverlay('Processing payment', 'Authorizing your card with Stripe...', 'paying');
 
-      const { error } = await stripeInstance.confirmPayment({
-        elements: stripeElements,
-        confirmParams: { return_url: window.location.href },
-        redirect: 'if_required',
-      });
+      const isSetup = checkoutMode === 'setup';
+      showPaymentOverlay(
+        isSetup ? 'Saving your card' : 'Processing payment',
+        isSetup ? 'Securely storing your card with Stripe...' : 'Authorizing your card with Stripe...',
+        'paying'
+      );
+
+      // Mirror the cloud checkout drawer: a $0 first invoice yields a
+      // SetupIntent, which needs confirmSetup + a follow-up call to promote
+      // the saved card to the subscription's default_payment_method. Using
+      // confirmPayment here is what previously froze the overlay.
+      let error;
+      if (isSetup) {
+        const res = await stripeInstance.confirmSetup({
+          elements: stripeElements,
+          confirmParams: { return_url: window.location.href },
+          redirect: 'if_required',
+        });
+        error = res.error;
+        if (!error) {
+          try {
+            const attach = await fetch(CLOUD_ORIGIN + '/api/checkout/attach-payment-method', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authJwt,
+              },
+              body: JSON.stringify({
+                subscription_id: checkoutSubscriptionId,
+                setup_intent_id: res.setupIntent && res.setupIntent.id,
+              }),
+            });
+            if (!attach.ok) {
+              // The subscription is already active (nothing was due), so a
+              // failure here is not fatal — the card just isn't wired as the
+              // default yet and can be re-added from Billing. Don't block.
+              console.warn('attach-payment-method failed:', await attach.text());
+            }
+          } catch (e) {
+            console.warn('attach-payment-method threw:', e);
+          }
+        }
+      } else {
+        const res = await stripeInstance.confirmPayment({
+          elements: stripeElements,
+          confirmParams: { return_url: window.location.href },
+          redirect: 'if_required',
+        });
+        error = res.error;
+      }
 
       if (error) {
         hidePaymentOverlay();
-        showFieldError('payment-error', error.message || 'Payment failed');
+        showFieldError('payment-error', error.message || (isSetup ? "We couldn't save your card" : 'Payment failed'));
         return;
       }
 
@@ -1660,12 +1806,54 @@
       }
     }
 
+    // Slow, throttled refresh for the home-view cards (recent backups, local
+    // backups, backup status, temporary-access list). The tunnel status poll
+    // runs every 3s; these lists change on the order of minutes, so refreshing
+    // them in lockstep only produced DOM churn. Call with force=true after an
+    // action that definitely changed them (backup completed, access granted).
+    const HOME_REFRESH_MS = 60000;
+    let _lastHomeRefresh = 0;
+    function refreshHomeCards(force) {
+      const now = Date.now();
+      if (!force && now - _lastHomeRefresh < HOME_REFRESH_MS) return;
+      _lastHomeRefresh = now;
+      void renderRecentBackups();
+      void renderLocalBackups();
+      loadBackupStatus();
+      void taRenderList();
+      void renderPlanChip();
+    }
+
+    // Current-plan chip in the connected header. /api/connect/quota (already
+    // proxied by the add-on as api/cloud/quota) returns the tier alongside
+    // used_bytes / limit_bytes, so this needs no new cloud endpoint. Storage
+    // limits are enforced server-side but were never shown anywhere.
+    let _planChipSig = null;
+    async function renderPlanChip() {
+      const el = document.getElementById('sh-plan');
+      if (!el) return;
+      const { ok, body } = await rqFetch('api/cloud/quota');
+      if (!ok || !body || !body.tier) return;   // leave any prior value alone
+      const name = String(body.tier).charAt(0).toUpperCase() + String(body.tier).slice(1);
+      const used = Number(body.used_bytes);
+      const limit = Number(body.limit_bytes);
+      const usage = Number.isFinite(used) && Number.isFinite(limit) && limit > 0
+        ? rqFmtBytes(used) + ' of ' + rqFmtBytes(limit)
+        : '';
+      const sig = name + '|' + usage;
+      if (sig === _planChipSig) return;
+      _planChipSig = sig;
+      el.innerHTML = rqEsc(name) +
+        (usage ? ' <span class="sh-plan-usage">' + rqEsc(usage) + '</span>' : '');
+      el.classList.remove('hidden');
+    }
+
     function showConnected(url, pendingRestart, restartReason) {
-      // The 30s status poll calls back through here. If we ALREADY think
-      // we're connected, this is just a refresh — skip the hideAll() reset
-      // so the user's current view (Compare, Restore, etc.) doesn't get
-      // clobbered. Update only the dynamic bits (tunnel URL, recent
-      // backups peek, pending-restart banner).
+      // The status poll (every 3s — see pollStatus) calls back through here.
+      // If we ALREADY think we're connected, this is just a refresh — skip the
+      // hideAll() reset so the user's current view (Compare, Restore, etc.)
+      // doesn't get clobbered. Update only the dynamic bits (tunnel URL,
+      // recent backups peek, pending-restart banner).
       const stateConnected = document.getElementById('state-connected');
       const alreadyConnected =
         stateConnected && !stateConnected.classList.contains('hidden');
@@ -1688,14 +1876,17 @@
         switchTab('remote');
       }
 
-      // Refresh recent-backups peek only when the home view is visible.
-      // While in a hash-based view, the user's flow is owned by that
-      // view — don't yank the page.
+      // Refresh the home cards only when the home view is visible. While in a
+      // hash-based view, the user's flow is owned by that view — don't yank
+      // the page.
+      //
+      // These used to run on EVERY status tick, i.e. every 3 seconds, and each
+      // one rebuilds its section via innerHTML after an await. That was the
+      // visible flicker. The status poll is about tunnel state; backup lists
+      // don't change on that cadence, so they get their own slow refresh.
+      // Force an immediate pass when we've just (re)connected.
       if (!inHashView) {
-        void renderRecentBackups();
-        void renderLocalBackups();
-        loadBackupStatus();
-        void taRenderList();
+        refreshHomeCards(!alreadyConnected);
       }
 
       // Keep polling at a slower cadence so revocations / disconnects
@@ -1898,13 +2089,6 @@
         uploading: 'Uploading to cloud...',
       };
 
-      function rqFmtBytes(n) {
-        if (!n || n < 0) return '';
-        if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
-        if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
-        return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
-      }
-
       for (let i = 0; i < 360; i++) {
         await new Promise(r => setTimeout(r, 2000));
         try {
@@ -1937,6 +2121,10 @@
             const btn = document.getElementById('btn-backup');
             btn.disabled = false;
             btn.textContent = 'Back Up Now';
+            // A backup just landed, so bypass the 60s home-refresh throttle —
+            // otherwise the new entry wouldn't show up in the list for up to a
+            // minute after the success toast.
+            refreshHomeCards(true);
             return;
           }
         } catch (e) { /* keep polling */ }
@@ -1977,6 +2165,10 @@
         const s = await resp.json();
         if (s.last_backup) {
           document.getElementById('backup-last-time').textContent = new Date(s.last_backup).toLocaleString();
+        } else {
+          // Don't leave a stale timestamp on screen when there's nothing to
+          // report — this field used to only ever be written, never cleared.
+          document.getElementById('backup-last-time').textContent = 'Never';
         }
         if (s.in_progress) {
           const btn = document.getElementById('btn-backup');
@@ -1994,6 +2186,15 @@
     //
     // Helper utilities + view registrations. All views render into the
     // #roamiq-view-host element managed by the hash router below.
+
+    // Hoisted out of pollBackupStatus() so the plan chip can share it —
+    // it was function-private and duplicating it would just invite drift.
+    function rqFmtBytes(n) {
+      if (!n || n < 0) return '';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+      if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+      return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+    }
 
     function rqEsc(s) {
       return String(s == null ? '' : s)
@@ -2106,17 +2307,43 @@
     }
 
     // ─── Recent backups peek (home view) ────────────────────────────────
+    // Re-render discipline (this used to flicker badly):
+    //   1. The "Loading…" placeholder is painted ONLY on first fill. On every
+    //      later refresh the existing rows stay on screen while the fetch is in
+    //      flight — blanking the host and awaiting the network is what made the
+    //      section strobe.
+    //   2. If the fetched payload is identical to what's already rendered we
+    //      return without touching the DOM at all.
+    // Combined with the slow refresh cadence (see scheduleHomeRefresh), the
+    // list now only changes when its contents actually change.
+    let _recentBackupsSig = null;
     async function renderRecentBackups() {
       const host = document.getElementById('recent-backups');
       if (!host) return;
-      host.innerHTML = '<p style="color:var(--muted);font-size:12px;">Loading recent backups…</p>';
+      const firstFill = !host.dataset.filled;
+      if (firstFill) {
+        host.innerHTML = '<p style="color:var(--muted);font-size:12px;">Loading recent backups…</p>';
+      }
       const { ok, body } = await rqFetch('api/cloud/backups');
       if (!ok || !body || !Array.isArray(body.backups)) {
-        host.innerHTML = '';
+        // Leave a populated list alone on a network blip — only clear if we
+        // never managed to fill it in the first place.
+        if (firstFill) host.innerHTML = '';
         return;
       }
       const recent = body.backups.slice(0, 5);
+      const sig = JSON.stringify(recent.map(b => [b.id, b.label, b.filename, b.backup_type, b.created_at, b.pinned_at]));
+      if (sig === _recentBackupsSig && host.dataset.filled) return;
+      _recentBackupsSig = sig;
+      host.dataset.filled = '1';
       if (recent.length === 0) {
+        // The cloud is the source of truth for CLOUD backups, and this card is
+        // titled "Cloud Backups". The add-on caches last_backup to /data and
+        // only re-checks the cloud when that cache is EMPTY, so a stale cached
+        // timestamp could sit above a "No backups yet" empty state — the card
+        // contradicted itself. If the cloud has none, say Never.
+        const lastEl = document.getElementById('backup-last-time');
+        if (lastEl) lastEl.textContent = 'Never';
         host.innerHTML =
           '<div style="padding:14px;border:1px dashed var(--border);border-radius:8px;text-align:center;color:var(--muted);font-size:13px;">' +
           'No backups yet — your first scheduled backup runs tonight at 2:00 AM.' +
@@ -2702,15 +2929,24 @@
       void taRenderList();
       setTimeout(() => { void taRenderList(); }, 3000);
     }
+    // Same no-churn contract as renderRecentBackups: bail out before touching
+    // the DOM when the payload is unchanged.
+    let _localBackupsSig = null;
     async function renderLocalBackups() {
       const host = document.getElementById('local-backups');
       if (!host) return;
       const { ok, body } = await rqFetch('api/local_backups');
       if (!ok || !body || !Array.isArray(body.backups) || body.backups.length === 0) {
-        host.innerHTML = '';
+        if (_localBackupsSig !== '[]') {
+          _localBackupsSig = '[]';
+          host.innerHTML = '';
+        }
         return;
       }
       const recent = body.backups.slice(0, 5);
+      const sig = JSON.stringify([body.backups.length, recent.map(b => [b.slug, b.label, b.filename, b.created_at])]);
+      if (sig === _localBackupsSig) return;
+      _localBackupsSig = sig;
       let html = '<div style="border-top:1px solid var(--border);padding-top:12px;">' +
         '<p style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin-bottom:8px;">' +
           'Local backups <span style="color:var(--primary);">(' + body.backups.length + ')</span>' +
