@@ -1,5 +1,7 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
+ARG BUILD_VERSION=0.6.26
+ENV BUILD_VERSION=${BUILD_VERSION}
 
 # HA Supervisor injects BUILD_ARCH for the target arch of this build. We use it
 # to select the matching pre-compiled .so binaries — one add-on repo entry,

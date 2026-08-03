@@ -1,5 +1,10 @@
 name: ROAMiQ Cloud
-version: 0.6.24
+# v0.6.26: shard logical backups into <=450 MiB storage objects so they work
+# under the project-wide 500 MiB object cap; restore reassembles parts in order.
+# v0.6.25: resilient post-pair heartbeat with add-on version and backup health
+# telemetry; true 6 MiB resumable TUS backup uploads; failed pre-update snapshot
+# backoff so an oversized or interrupted upload cannot create a backup storm.
+version: 0.6.26
 # v0.6.23: BLOCKING FIX — the plan picker called Stripe's confirmPayment() for
 # every checkout, but /api/checkout returns mode:"setup" with a SetupIntent
 # secret whenever the first invoice is $0. confirmPayment never resolves on a
