@@ -1,33 +1,5 @@
 name: ROAMiQ Cloud
-version: 0.6.24
-# v0.6.23: BLOCKING FIX — the plan picker called Stripe's confirmPayment() for
-# every checkout, but /api/checkout returns mode:"setup" with a SetupIntent
-# secret whenever the first invoice is $0. confirmPayment never resolves on a
-# SetupIntent, so the overlay froze on "Authorizing card" forever while the
-# subscription was in fact already created server-side. Now branches to
-# confirmSetup + /api/checkout/attach-payment-method, matching the cloud
-# checkout drawer. Also: monthly/annual toggle in the plan picker (mirrors
-# cloud.roamiq.com instead of listing every tier twice), current-plan +
-# storage-used chip in the connected header, Sign In as the default auth tab,
-# and the Cloud Backups card no longer flickers every 3 s or shows a stale
-# "Last backup" above an empty list.
-# v0.6.22: publish-only bump for the re-cythonized multi-arch build. The public
-# add-on repo (roamiq/roamiq-apps) was last published at 0.6.20, so this build
-# is the first to ship v0.6.21's external_url fix PLUS two changesets that
-# landed WITHOUT their own version bump: the "Coming Soon!" gate on the
-# Protect/Genius tiers in the add-on UI (#452) and opt-in /share + /media
-# folder backups (#458). Bumping to 0.6.22 so Supervisor actually offers the
-# update and the shipped version number matches the shipped contents.
-# v0.6.21: set homeassistant.external_url to the assigned tunnel subdomain on
-# pairing/startup + a Core-API self-check that warns (loudly, in the addon log)
-# when external_url is unset/mismatched. Fixes IndieAuth/OAuth add-on flows
-# (e.g. Music Assistant "add music source") 502ing over the tunnel because HA
-# didn't recognise its own <subdomain>.cloud.roamiq.com external URL.
-# v0.6.16: slug renamed roamiq_connect -> roamiq_cloud to match the folder and
-# display name. NOTE: the slug is the add-on's persistent install identity, so
-# this rename ORPHANS existing installs (fresh /data volume => lost Cloudflare
-# tunnel token + instance_id). Existing customers must REINSTALL and re-pair.
-# (Accepted trade-off; do NOT revert to roamiq_connect for "continuity".)
+version: 0.6.27
 slug: roamiq_cloud
 description: Secure remote access for Home Assistant via Cloudflare Tunnel
 url: https://cloud.roamiq.com
@@ -49,13 +21,7 @@ options:
   enable_ai_bubble: true
 schema:
   cloud_base_url: "url"
-  # Show the floating ROAMiQ AI chat bubble on this instance's dashboards.
-  # Default ON. When turned OFF, the add-on removes the AI card's Lovelace
-  # resource so the bubble stops appearing (tier gating still applies when ON).
   enable_ai_bubble: "bool?"
-  # Debug-only: permit a non-https / non-roamiq.com cloud_base_url (local dev
-  # against a Next.js on http://host.docker.internal:3000). Production installs
-  # must leave this false — get_cloud_base_url() rejects insecure URLs otherwise.
   allow_insecure_cloud_url: "bool?"
 
 hassio_api: true
