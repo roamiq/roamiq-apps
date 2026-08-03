@@ -4432,12 +4432,48 @@
         return isTerminal;
       };
 
+      
+      
+      
+      
+      
+      let _restoreUnreachableSince = 0;
       async function loadAndPoll() {
-        const r = await rqFetch('api/cloud/restores/' + encodeURIComponent(jobId));
-        if (!r.ok || !r.body || !r.body.job) {
+        
+        
+        
+        
+        let r;
+        try {
+          r = await rqFetch('api/cloud/restores/' + encodeURIComponent(jobId));
+        } catch (e) {
+          r = { ok: false, status: 0, body: null };
+        }
+
+        if (r.status === 404) {
           host.innerHTML = '<div class="card"><a href="#backups" style="color:var(--muted);font-size:13px;text-decoration:none;">← Back</a><p style="margin-top:12px;color:var(--error);">Restore not found.</p></div>';
           return;
         }
+
+        if (!r.ok || !r.body || !r.body.job) {
+          
+          
+          if (!_restoreUnreachableSince) _restoreUnreachableSince = Date.now();
+          const waited = Math.round((Date.now() - _restoreUnreachableSince) / 1000);
+          host.innerHTML =
+            '<div class="card"><a href="#backups" style="color:var(--muted);font-size:13px;text-decoration:none;">← Back</a>'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-top:12px;">'
+            + '<span class="spinner" aria-hidden="true"></span>'
+            + '<strong>Home Assistant is restarting</strong></div>'
+            + '<p style="margin-top:8px;color:var(--muted);font-size:13px;">'
+            + 'Applying the restore. This page reconnects on its own — you can leave it open.'
+            + (waited > 15 ? ' Waiting ' + waited + 's.' : '')
+            + '</p></div>';
+          _restorePollHandle = setTimeout(loadAndPoll, 3000);
+          return;
+        }
+
+        _restoreUnreachableSince = 0;
         const done = renderJob(r.body.job);
         if (!done) _restorePollHandle = setTimeout(loadAndPoll, 3000);
       }
