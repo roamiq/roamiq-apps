@@ -1,5 +1,5 @@
 name: ROAMiQ Cloud
-version: 0.6.30
+version: 0.6.31
 slug: roamiq_cloud
 description: Secure remote access for Home Assistant via Cloudflare Tunnel
 url: https://cloud.roamiq.com
