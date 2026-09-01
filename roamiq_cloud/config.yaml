@@ -1,5 +1,5 @@
 name: ROAMiQ Cloud
-version: 0.6.31
+version: 0.6.41
 slug: roamiq_cloud
 description: Secure remote access for Home Assistant via Cloudflare Tunnel
 url: https://cloud.roamiq.com
@@ -19,8 +19,14 @@ panel_admin: true
 options:
   cloud_base_url: "https://cloud.roamiq.com"
   enable_ai_bubble: true
+  backup_schedule: nightly
+  max_upload_gb_24h: 6
+  max_upload_gb_30d: 45
 schema:
   cloud_base_url: "url"
+  backup_schedule: "list(weekly|nightly|manual)?"
+  max_upload_gb_24h: "float(0,500)?"
+  max_upload_gb_30d: "float(0,2000)?"
   enable_ai_bubble: "bool?"
   allow_insecure_cloud_url: "bool?"
 
