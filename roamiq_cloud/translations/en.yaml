@@ -1,0 +1,36 @@
+configuration:
+  cloud_base_url:
+    name: ROAMiQ Cloud address
+    description: >-
+      Leave this alone unless ROAMiQ support asks you to change it.
+  enable_ai_bubble:
+    name: Show the ROAMiQ AI chat bubble
+    description: >-
+      Adds a floating ROAMiQ AI button to your dashboards. Turn off to remove it.
+  backup_schedule:
+    name: Automatic backups
+    description: >-
+      How often ROAMiQ backs up this Home Assistant to the cloud. Weekly uses
+      about a seventh of the data of nightly, which matters on Starlink or
+      cellular. Backups run overnight, between 2 and 4 AM local time. Whatever
+      you choose, ROAMiQ always takes a safety snapshot before an update, and you
+      can back up any time from the ROAMiQ Cloud panel. Choose weekly for once a
+      week, nightly for every night, or manual to only back up when you ask.
+  max_upload_gb_24h:
+    name: Backup upload limit per day (GB)
+    description: >-
+      The most backup data ROAMiQ will upload in any 24 hours. If a backup would
+      go over this, ROAMiQ skips it and tells you instead of quietly spending
+      your data. One backup is usually well under a gigabyte, so 6 leaves plenty
+      of room. Keep a limit here if you are on Starlink, cellular, or any plan
+      with a data cap. Set it to 0 only if your internet is truly unlimited.
+  max_upload_gb_30d:
+    name: Backup upload limit per 30 days (GB)
+    description: >-
+      The same protection over a longer stretch. This is a rolling 30 days, not
+      your provider's billing month. Set it to 0 only if your internet is truly
+      unlimited.
+  allow_insecure_cloud_url:
+    name: Allow an insecure cloud address
+    description: >-
+      Development only. Leave off.
