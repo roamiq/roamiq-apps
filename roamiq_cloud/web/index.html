@@ -1428,6 +1428,29 @@
     
     
     let statusKnown = false;
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    async function haOriginFields() {
+      try {
+        const resp = await fetch(BASE + 'api/status');
+        if (!resp.ok) return {};
+        const data = await resp.json();
+        if (typeof data.ha_port !== 'number') return {};
+        return { ha_port: data.ha_port, ha_ssl: data.ha_ssl === true };
+      } catch (e) {
+        console.warn('Could not read the Home Assistant port for the tunnel:', e);
+        return {};
+      }
+    }
     let lastPairingCode = null;
     let authJwt = sessionStorage.getItem('roamiq_jwt') || null;
     
@@ -2035,10 +2058,13 @@
         if (!ok) return false;
       }
       showClaimOverlay('Reconnecting', 'Checking for your existing ROAMiQ Cloud connection…', 'reserve');
+      const haOrigin = await haOriginFields();
       const claim = () => fetch(CLOUD_ORIGIN + '/api/connect/auto-claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authJwt },
-        body: JSON.stringify({ code: lastPairingCode }),   
+        
+        
+        body: JSON.stringify({ code: lastPairingCode, ...haOrigin }),
       });
       try {
         let resp = await claim();
@@ -3678,13 +3704,14 @@
         showClaimOverlay('Connecting', 'Reserving your address with ROAMiQ Cloud...', 'reserve');
 
         async function doClaim() {
+          const haOrigin = await haOriginFields();
           const resp = await fetch(CLOUD_ORIGIN + '/api/connect/auto-claim', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ' + authJwt,
             },
-            body: JSON.stringify({ code: lastPairingCode, subdomain }),
+            body: JSON.stringify({ code: lastPairingCode, subdomain, ...haOrigin }),
           });
           return { resp, data: await resp.json() };
         }
