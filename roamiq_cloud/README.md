@@ -20,9 +20,15 @@ guest access.
 ## Home Assistant configuration this add-on manages
 
 To make remote access and add-on sign-in flows work over the tunnel, Home
-Assistant needs two things set in `configuration.yaml`. **The add-on writes both
-automatically on pairing/startup**, then asks you to restart Home Assistant to
-apply them. It never overwrites values you've set yourself.
+Assistant needs two things. **The add-on writes the external URL to
+`configuration.yaml` automatically on pairing/startup**, then asks you to restart
+Home Assistant to apply it. It never overwrites a value you've set yourself.
+
+The trusted proxies are set by the ROAMiQ Guardian add-on. On Home Assistant
+2026.8 and newer they live in HA's own HTTP settings (Settings > System >
+Network), which Guardian configures through HA's API; the `http:` YAML block
+below is only read by older Home Assistant versions, and HA 2026.8+ reports it
+as deprecated if it is still present.
 
 ```yaml
 homeassistant:
