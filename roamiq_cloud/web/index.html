@@ -570,6 +570,7 @@
     .backup-restore-callout p { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
     .backup-restore-callout .backup-primary-action { flex: none; }
     .backup-utility-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .rq-download-note { margin-top: 10px; font-size: 12px; line-height: 1.45; color: var(--muted); }
     .backup-utility-action { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; padding: 8px 13px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: 600 12px/1 'Inter', sans-serif; cursor: pointer; }
     .backup-utility-action:hover { border-color: var(--primary); color: var(--primary); }
     .backup-utility-action:disabled { opacity: .55; cursor: wait; }
@@ -6475,6 +6476,7 @@
           '<button type="button" class="backup-utility-action rq-action" data-act="rename">Rename</button>' +
           '<button type="button" class="backup-utility-action rq-action" data-act="download">Download</button>' +
         '</div>' +
+        '<p id="rq-download-note" class="rq-download-note hidden" role="status" aria-live="polite"></p>' +
       '</section>';
       if (!isSystem) {
         html += '<div class="backup-delete-row"><button type="button" class="backup-delete-action rq-action" data-act="delete">Delete backup</button></div>';
@@ -6520,23 +6522,66 @@
             
             
             
+            
+            
             btn.disabled = true;
             const prevLabel = btn.textContent;
             btn.textContent = 'Preparing…';
             const dlPath = 'api/cloud/backups/' + encodeURIComponent(b.id) + '/download';
-            let haveLocal = false;
-            try {
-              const probe = await fetch(BASE + dlPath + '?probe=1');
-              haveLocal = probe.ok;
-            } catch (e) {  }
-            btn.disabled = false;
-            btn.textContent = prevLabel;
-            if (haveLocal) {
-              
+            const prepPath = 'api/cloud/backups/' + encodeURIComponent(b.id) + '/prepare';
+            const note = document.getElementById('rq-download-note');
+            const setNote = (text) => {
+              if (!note) return;
+              note.textContent = text || '';
+              note.classList.toggle('hidden', !text);
+            };
+            const restore = () => { btn.disabled = false; btn.textContent = prevLabel; setNote(''); };
+            
+            
+            const startDownload = () => {
+              btn.textContent = 'Downloading…';
+              setNote('Your download has started. Check your browser’s downloads.');
               window.location = BASE + dlPath;
+              setTimeout(restore, 4000);
+            };
+            const probe = await rqFetch(dlPath + '?probe=1');
+            const src = probe.ok && probe.body ? probe.body.source : null;
+            if (src === 'local') {
+              startDownload();
+            } else if (src === 'cloud') {
+              setNote('Getting this backup from ROAMiQ Cloud and checking it. Large backups can take a few minutes. Keep this page open.');
+              const start = await rqFetch(prepPath, { method: 'POST' });
+              if (!start.ok) {
+                restore();
+                await rqAlert("Couldn't download the backup", (start.body && (start.body.detail || start.body.error)) || 'Try again in a moment.');
+              } else {
+                let state = start.body || {};
+                while (state.state === 'preparing') {
+                  await new Promise((r) => setTimeout(r, 2000));
+                  const poll = await rqFetch(prepPath);
+                  state = (poll.ok && poll.body) || { state: 'failed', detail: 'Lost track of the download. Try again.' };
+                  if (state.state === 'preparing' && state.total) {
+                    btn.textContent = 'Preparing… ' + Math.min(99, Math.floor((100 * (state.done || 0)) / state.total)) + '%';
+                  }
+                }
+                if (state.state === 'ready') {
+                  startDownload();
+                } else {
+                  restore();
+                  await rqAlert("Couldn't download the backup", state.detail || 'Try again in a moment.');
+                }
+              }
             } else {
-              
-              window.open(CLOUD_ORIGIN + '/backups', '_blank');
+              restore();
+              const why = probe.body && (probe.body.detail || probe.body.error);
+              if (probe.body && probe.body.error === 'cloud_update_needed' && CLOUD_ORIGIN) {
+                
+                
+                showToast('Opening your ROAMiQ Cloud backups…');
+                rqOpenExternal(null, CLOUD_ORIGIN + '/backups');
+              } else {
+                await rqAlert("Couldn't download the backup", typeof why === 'string' && why ? why : 'Try again in a moment.');
+              }
             }
           } else if (act === 'delete') {
             if (!await rqConfirm('Delete this backup?', "This can't be undone.", 'Delete')) return;
